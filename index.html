@@ -1,0 +1,227 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UniRide | Viajes universitarios</title>
+    <meta
+      name="description"
+      content="Crea y consulta viajes universitarios con UniRide."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="brand-wrap">
+          <div class="brand-mark">
+            <span class="mark-circle"></span>
+          </div>
+          <div class="brand-name">UniRide</div>
+        </div>
+
+        <nav class="main-nav">
+          <a href="#inicio">Inicio</a>
+          <a href="#mapa">Mapa</a>
+          <a href="#viaje">Viaje</a>
+        </nav>
+
+        <div class="header-actions">
+          <span class="session-label" id="session-label">Sin iniciar sesión</span>
+          <button class="support-btn" id="login-button" type="button">Iniciar sesión</button>
+          <button class="panic-btn" id="new-trip-button" type="button" hidden>＋ Solicitar viaje</button>
+          <button class="support-btn" id="logout-button" type="button" hidden>Cerrar sesión</button>
+        </div>
+      </header>
+
+      <main class="dashboard" id="inicio">
+        <section class="map-panel" id="mapa">
+          <div class="toolbar-rail">
+            <button class="tool-btn" id="fit-trip-map" type="button" aria-label="Ver ubicaciones del viaje">⌕</button>
+            <button class="tool-btn" id="locate-me" type="button" aria-label="Mostrar mi ubicación">◎</button>
+            <button class="tool-btn plus" id="zoom-in" type="button" aria-label="Acercar mapa">＋</button>
+            <button class="tool-btn minus" id="zoom-out" type="button" aria-label="Alejar mapa">－</button>
+          </div>
+
+          <div class="map-surface">
+            <div id="trip-map" role="img" aria-label="Mapa de ubicaciones de los viajes"></div>
+          </div>
+          <div class="map-footer">
+            <span class="map-legend"><i class="origin-marker"></i>Origen</span>
+            <span class="map-legend"><i class="destination-marker"></i>Destino</span>
+            <span class="map-legend"><i class="current-marker"></i>Conductor</span>
+            <span class="map-status" id="map-status" role="status">El mapa mostrará ubicaciones de OpenStreetMap.</span>
+          </div>
+        </section>
+
+        <aside class="info-panel" id="viaje">
+          <div class="panel-card">
+            <div class="panel-header" id="driver-header">Inicia sesión para continuar</div>
+
+            <div class="driver-box">
+              <div class="driver-photo" id="driver-avatar" aria-hidden="true">UR</div>
+              <div class="driver-copy">
+              <div class="driver-name" id="driver-name">UniRide</div>
+                <div class="stars-row">
+                  <span class="star">★</span>
+                <span id="driver-caption">Viajes de tu comunidad</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="vehicle-row">
+              <div class="vehicle-icon"></div>
+              <div class="vehicle-copy">
+                <div class="vehicle-name" id="vehicle-name">Mapa de ruta</div>
+                <div class="license" id="vehicle-details">La ruta vial se mostrará al seleccionar un viaje.</div>
+              </div>
+            </div>
+
+            <div class="journey-row">
+              <div class="journey-header">
+                <span class="status-dot"></span>
+                <span id="trip-status">Sin viaje seleccionado</span>
+                <span class="time" id="trip-duration">-- min</span>
+              </div>
+              <div class="progress-track"><span></span></div>
+            </div>
+
+            <div class="destination-box">
+              <span id="trip-route">Origen → Destino</span>
+            </div>
+
+            <div class="stats-row">
+              <div class="stat-item">
+                <strong id="trip-distance">-- km</strong>
+                <span>Distancia</span>
+              </div>
+              <div class="stat-item">
+                <strong id="trip-price">--</strong>
+                <span>Precio estimado</span>
+              </div>
+            </div>
+
+            <button class="share-btn" id="track-trip-button" type="button" hidden>Iniciar seguimiento</button>
+            <button class="share-btn" id="new-trip-panel-button" type="button" hidden>＋ Solicitar otro viaje</button>
+          </div>
+
+          <section class="trip-history" aria-labelledby="history-heading">
+            <div class="history-heading">
+              <h2 id="history-heading">Solicitudes de viaje</h2>
+              <span id="trip-count">0</span>
+            </div>
+            <p class="history-empty" id="history-empty">Inicia sesión para ver las solicitudes de viaje.</p>
+            <ul class="trip-list" id="trip-list" aria-live="polite"></ul>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <dialog class="trip-dialog" id="login-dialog" aria-labelledby="login-title">
+      <form id="login-form">
+        <div class="dialog-heading">
+          <div>
+            <span class="dialog-eyebrow">UniRide · modo de demostración</span>
+            <h2 id="login-title">Iniciar sesión</h2>
+            <p>Elige tu perfil para probar la experiencia de usuario o conductor.</p>
+          </div>
+          <button class="dialog-close" id="close-login" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            Nombre
+            <input name="name" type="text" maxlength="80" placeholder="Ej. Ana Martínez" required />
+          </label>
+          <label>
+            Ingresar como
+            <select name="role" id="login-role" required>
+              <option value="user">Usuario (solicita viajes)</option>
+              <option value="driver">Conductor (acepta viajes)</option>
+            </select>
+          </label>
+          <label class="driver-field" hidden>
+            Vehículo
+            <input name="vehicle" type="text" maxlength="80" placeholder="Ej. Hyundai Accent" />
+          </label>
+          <label class="driver-field" hidden>
+            Placa
+            <input name="plate" type="text" maxlength="12" placeholder="Ej. ABC-123" />
+          </label>
+          <label class="driver-field" hidden>
+            Color del vehículo
+            <input name="color" type="text" maxlength="40" placeholder="Ej. Azul" />
+          </label>
+        </div>
+        <p class="demo-notice">Acceso de demostración local; no se valida una contraseña ni una identidad real.</p>
+        <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
+        <div class="dialog-actions">
+          <button class="cancel-button" id="cancel-login" type="button">Cancelar</button>
+          <button class="submit-button" type="submit">Continuar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="trip-dialog" id="trip-dialog" aria-labelledby="dialog-title">
+      <form id="trip-form">
+        <div class="dialog-heading">
+          <div>
+            <span class="dialog-eyebrow">UniRide · modo de prueba</span>
+            <h2 id="dialog-title">Crear un viaje</h2>
+            <p>Indica quién solicita el viaje y sus ubicaciones.</p>
+          </div>
+          <button class="dialog-close" id="close-dialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            Origen
+            <input name="origin" type="text" maxlength="120" placeholder="Dirección, ciudad y país" required />
+          </label>
+          <label>
+            Destino
+            <input name="destination" type="text" maxlength="120" placeholder="Dirección, ciudad y país" required />
+          </label>
+          <label>
+            Duración estimada (min)
+            <input name="durationMinutes" type="number" min="1" max="1440" placeholder="Se calcula automáticamente" readonly required />
+          </label>
+          <label>
+            Distancia (km)
+            <input name="distanceKm" type="number" min="0.1" max="10000" step="0.1" placeholder="Se calcula automáticamente" readonly required />
+          </label>
+          <label>
+            Precio estimado (COP)
+            <input name="price" type="number" min="0" max="1000000" step="1" value="18000" required />
+          </label>
+        </div>
+
+        <p class="route-estimate" id="route-estimate" role="status" aria-live="polite">
+          La distancia y duración se calcularán al ingresar origen y destino.
+        </p>
+        <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+        <div class="dialog-actions">
+          <button class="cancel-button" id="cancel-dialog" type="button">Cancelar</button>
+          <button class="submit-button" id="submit-trip" type="submit">Guardar viaje</button>
+        </div>
+      </form>
+    </dialog>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="script.js"></script>
+  </body>
+</html>
