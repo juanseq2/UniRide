@@ -1,11 +1,13 @@
 interface IndexProps {
   irAlLogin: () => void;
   irAlRegistro: () => void;
+  irAlMapa: () => void;
 }
 
 function Index({
   irAlLogin,
   irAlRegistro,
+  irAlMapa,
 }: IndexProps) {
   return (
     <div className="index-page">
@@ -19,6 +21,13 @@ function Index({
         </div>
 
         <div className="navbar-buttons">
+
+          <button
+            onClick={irAlMapa}
+            className="btn-secondary"
+          >
+            Mapa
+          </button>
 
           <button
             onClick={irAlLogin}

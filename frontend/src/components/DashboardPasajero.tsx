@@ -3,9 +3,10 @@ import type { Usuario } from "../api"
 interface DashboardPasajeroProps {
   usuario: Usuario;
   cerrarSesion: () => void;
+  abrirMapa: () => void;
 }
 
-function DashboardPasajero({ usuario, cerrarSesion }: DashboardPasajeroProps) {
+function DashboardPasajero({ usuario, cerrarSesion, abrirMapa }: DashboardPasajeroProps) {
   const primerNombre = usuario.nombre.split(" ")[0];
   const inicial = usuario.nombre.charAt(0).toUpperCase();
 
@@ -24,7 +25,7 @@ function DashboardPasajero({ usuario, cerrarSesion }: DashboardPasajeroProps) {
             🏠 Inicio
           </button>
 
-          <button className="menu-item">
+          <button className="menu-item" onClick={abrirMapa}>
             🔎 Buscar rutas
           </button>
 

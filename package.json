@@ -4,7 +4,8 @@
   "private": true,
   "description": "Demo local UniRide con creación de viajes y base de datos SQLite.",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "npm --prefix frontend run build"
   },
   "engines": {
     "node": ">=22.5"

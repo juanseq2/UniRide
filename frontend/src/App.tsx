@@ -7,8 +7,9 @@ import Index from "./components/Index";
 import DashboardConductor from "./components/DashboardConductor";
 import DashboardPasajero from "./components/DashboardPasajero";
 import AdminDashboard from "./components/AdminDashboard";
+import MapaViajes from "./components/MapaViajes";
 
-type Vista = "index" | "formulario" | "dashboard";
+type Vista = "index" | "formulario" | "dashboard" | "mapa";
 
 function App() {
   const [vista, setVista] = useState<Vista>("index");
@@ -100,15 +101,44 @@ function App() {
     return <div className="cargando-pantalla">Cargando UniRide...</div>;
   }
 
+  if (vista === "mapa") {
+    return (
+      <MapaViajes
+        usuario={usuario}
+        volver={() => setVista(usuario ? "dashboard" : "index")}
+        iniciarSesion={() => {
+          setFormulario("login");
+          setError(null);
+          setMensaje(null);
+          setVista("formulario");
+        }}
+        cerrarSesion={cerrarSesion}
+      />
+    );
+  }
+
   // --- Dashboard según el rol ---
   if (vista === "dashboard" && usuario && token) {
     if (usuario.rol === "admin") {
       return <AdminDashboard usuario={usuario} token={token} cerrarSesion={cerrarSesion} />;
     }
     if (usuario.rol === "conductor") {
-      return <DashboardConductor usuario={usuario} cerrarSesion={cerrarSesion} />;
+      return (
+        <DashboardConductor
+          usuario={usuario}
+          token={token}
+          cerrarSesion={cerrarSesion}
+          abrirMapa={() => setVista("mapa")}
+        />
+      );
     }
-    return <DashboardPasajero usuario={usuario} cerrarSesion={cerrarSesion} />;
+    return (
+      <DashboardPasajero
+        usuario={usuario}
+        cerrarSesion={cerrarSesion}
+        abrirMapa={() => setVista("mapa")}
+      />
+    );
   }
 
   // --- Página de inicio (landing) ---
@@ -127,6 +157,7 @@ function App() {
           setMensaje(null);
           setVista("formulario");
         }}
+        irAlMapa={() => setVista("mapa")}
       />
     );
   }

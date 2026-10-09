@@ -26,6 +26,11 @@ def publicar_ruta(
     ).first()
     if not vehiculo:
         raise HTTPException(status_code=404, detail="Ese vehículo no existe o no te pertenece")
+    if datos.cupos_disponibles > vehiculo.capacidad:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Los cupos disponibles no pueden superar la capacidad del vehículo ({vehiculo.capacidad})",
+        )
 
     nueva_ruta = Ruta(
         id_conductor=conductor.id_usuario,

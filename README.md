@@ -19,8 +19,10 @@ el mapa. No valida identidades ni contraseñas reales.
 ## Aplicación React + FastAPI
 
 Esta versión incluye registro e inicio de sesión, roles de pasajero, conductor y
-administrador, paneles por rol y gestión administrativa. Requiere Node.js,
-Python y PostgreSQL.
+administrador, paneles por rol, un mapa interactivo de Bogotá y gestión
+administrativa. Requiere Node.js, Python 3.12 y PostgreSQL. Usa Python 3.12
+para que `psycopg2-binary`, el adaptador de PostgreSQL fijado por el backend,
+se instale desde un paquete precompilado en Windows.
 
 ### 1. Preparar PostgreSQL
 
@@ -33,11 +35,14 @@ En una terminal, desde la raíz del proyecto:
 
 ```powershell
 cd backend
-py -m venv .venv
+py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
+
+Si ya creaste `.venv` con otra versión de Python, elimínala antes de recrearla
+con el comando anterior.
 
 Edita `backend/.env` y configura la URL de PostgreSQL, una clave secreta y el
 código de registro de administrador. El formato de la URL está en
@@ -64,3 +69,17 @@ npm run dev
 
 Abre http://localhost:5173. El frontend se conecta a la API en
 http://localhost:8000.
+
+Abre **Mapa** desde la página de inicio o **Buscar rutas / Mis rutas** desde tu
+panel para ver el mapa y los viajes publicados. El mapa consulta las rutas de
+PostgreSQL; como el modelo actual solo guarda origen y destino como texto, aún
+no dibuja el recorrido sobre el mapa.
+
+Desde el panel de conductor, **Crear nueva ruta** publica el viaje en PostgreSQL.
+La primera vez también solicita licencia, SOAT y los datos del vehículo; después
+puedes escoger un vehículo ya registrado. Las rutas publicadas aparecen en el
+panel del conductor y en el mapa.
+
+Para generar la versión de producción del frontend, ejecuta `npm run build`
+dentro de `frontend/`, o desde la raíz del proyecto después de instalar sus
+dependencias.
