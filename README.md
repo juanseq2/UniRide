@@ -47,7 +47,6 @@ Esto todavía no está en esta carpeta — lo creamos con un solo comando.
 Desde la raíz del proyecto (`uniride/`, no dentro de `backend/`):
 
 ```bash
-npm create vite@latest frontend -- --template react-ts
 cd frontend
 npm install
 npm run dev
@@ -71,9 +70,3 @@ uniride/
 │   └── schema.sql           # todas las tablas del diagrama de clases
 └── frontend/                # lo crea el comando de npm (paso 4)
 ```
-
-## Siguiente paso
-
-Una vez tengas `/health` respondiendo "conectada" y React corriendo en
-localhost:5173, seguimos con el módulo de autenticación (RF-01): registro,
-login con correo institucional y generación del token de sesión.
