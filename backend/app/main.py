@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.routers import auth, conductores, vehiculos, rutas, admin
+from app.routers import auth, conductores, vehiculos, rutas, admin, reservas
 
 app = FastAPI(
     title="UniRide API",
@@ -29,6 +29,7 @@ app.include_router(conductores.router)
 app.include_router(vehiculos.router)
 app.include_router(rutas.router)
 app.include_router(admin.router)
+app.include_router(reservas.router) 
 
 
 @app.get("/")

@@ -34,6 +34,8 @@ export interface Ruta {
   cupos_disponibles: number;
   aporte_sugerido: number;
   ruta_segura: boolean;
+  nombre_conductor?: string;
+  calificacion_conductor?: number;
 }
 
 export interface Vehiculo {
@@ -52,6 +54,27 @@ export interface DatosRuta {
   cupos_disponibles: number;
   aporte_sugerido: number;
   ruta_segura: boolean;
+}
+
+export interface FiltrosBusqueda {
+  origen?: string;
+  destino?: string;
+  fecha?: string;
+  solo_seguras?: boolean;
+}
+
+export interface DatosReserva {
+  id_ruta: number;
+  cantidad_cupos: number;
+}
+
+export interface Reserva {
+  id_reserva: number;
+  id_ruta: number;
+  id_pasajero: number;
+  estado: "pendiente" | "confirmada" | "rechazada" | "cancelada";
+  cantidad_cupos: number;
+  fecha_reserva: string;
 }
 
 export class ApiError extends Error {
@@ -76,8 +99,15 @@ async function manejarRespuesta(res: Response) {
   return data;
 }
 
-export async function buscarRutas(): Promise<Ruta[]> {
-  const res = await fetch(`${API_URL}/rutas/`);
+export async function buscarRutas(filtros: FiltrosBusqueda = {}): Promise<Ruta[]> {
+  const params = new URLSearchParams();
+  if (filtros.origen) params.set("origen", filtros.origen);
+  if (filtros.destino) params.set("destino", filtros.destino);
+  if (filtros.fecha) params.set("fecha", filtros.fecha);
+  if (filtros.solo_seguras) params.set("solo_seguras", "true");
+
+  const query = params.toString();
+  const res = await fetch(`${API_URL}/rutas/${query ? `?${query}` : ""}`);
   return manejarRespuesta(res);
 }
 
@@ -126,6 +156,34 @@ export async function publicarRuta(token: string, datos: DatosRuta): Promise<Rut
       "Content-Type": "application/json",
     },
     body: JSON.stringify(datos),
+  });
+  return manejarRespuesta(res);
+}
+
+// ---- Reservas ----
+export async function reservarCupo(token: string, datos: DatosReserva): Promise<Reserva> {
+  const res = await fetch(`${API_URL}/reservas/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(datos),
+  });
+  return manejarRespuesta(res);
+}
+
+export async function misReservas(token: string): Promise<Reserva[]> {
+  const res = await fetch(`${API_URL}/reservas/mias`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return manejarRespuesta(res);
+}
+
+export async function cancelarReserva(token: string, idReserva: number): Promise<Reserva> {
+  const res = await fetch(`${API_URL}/reservas/${idReserva}/cancelar`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
   });
   return manejarRespuesta(res);
 }

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.ruta import Ruta
-from app.models.usuario import Vehiculo, Conductor
+from app.models.usuario import Vehiculo, Conductor, Usuario
 from app import schemas
 from app.deps import obtener_conductor_actual
 
@@ -60,8 +60,13 @@ def buscar_rutas(
     """
     RF-04: búsqueda filtrada de rutas. A propósito NO requiere login:
     cualquiera puede buscar y comparar, solo se necesita login para reservar.
+    Incluye el nombre y la calificación del conductor (join con usuarios).
     """
-    query = db.query(Ruta).filter(Ruta.cupos_disponibles > 0)
+    query = (
+        db.query(Ruta, Usuario)
+        .join(Usuario, Ruta.id_conductor == Usuario.id_usuario)
+        .filter(Ruta.cupos_disponibles > 0)
+    )
 
     if origen:
         query = query.filter(Ruta.origen.ilike(f"%{origen}%"))
@@ -72,4 +77,21 @@ def buscar_rutas(
     if solo_seguras:
         query = query.filter(Ruta.ruta_segura.is_(True))
 
-    return query.order_by(Ruta.fecha, Ruta.hora_salida).all()
+    resultados = query.order_by(Ruta.fecha, Ruta.hora_salida).all()
+
+    return [
+        schemas.RutaOut(
+            id_ruta=r.id_ruta,
+            id_conductor=r.id_conductor,
+            origen=r.origen,
+            destino=r.destino,
+            fecha=r.fecha,
+            hora_salida=r.hora_salida,
+            cupos_disponibles=r.cupos_disponibles,
+            aporte_sugerido=r.aporte_sugerido,
+            ruta_segura=r.ruta_segura,
+            nombre_conductor=u.nombre,
+            calificacion_conductor=float(u.calificacion_promedio),
+        )
+        for r, u in resultados
+    ]

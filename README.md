@@ -3,19 +3,6 @@
 UniRide incluye dos implementaciones para compartir viajes universitarios: una
 demostración local sencilla y una aplicación con frontend React y API FastAPI.
 
-## Demostración local
-
-Requiere Node.js 22.5 o superior. Desde la raíz del proyecto:
-
-```bash
-npm start
-```
-
-Abre http://localhost:3000. Los datos se guardan en `uniride.sqlite`, que no se
-incluye en Git. Esta demostración permite iniciar sesión con perfiles de prueba,
-crear solicitudes de viaje, aceptar viajes como conductor y ver ubicaciones en
-el mapa. No valida identidades ni contraseñas reales.
-
 ## Aplicación React + FastAPI
 
 Esta versión incluye registro e inicio de sesión, roles de pasajero, conductor y

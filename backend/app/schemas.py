@@ -5,10 +5,12 @@ Los 'schemas' son distintos de los 'models' (app/models/...).
 """
 from datetime import date, time
 from typing import Optional
-
 from pydantic import BaseModel, EmailStr, field_validator
-
 from app.models.usuario import RolUsuario
+
+from datetime import datetime
+from app.models.reserva import EstadoReserva  
+from app.models.aporte import EstadoAporte
 
 
 # ============================================================
@@ -123,6 +125,40 @@ class RutaOut(BaseModel):
     cupos_disponibles: int
     aporte_sugerido: float
     ruta_segura: bool
+    nombre_conductor: Optional[str] = None
+    calificacion_conductor: Optional[float] = None
+    
+    class Config:
+        from_attributes = True
+
+# ============================================================
+# Reserva (RF-05)
+# ============================================================
+class ReservaCreate(BaseModel):
+    id_ruta: int
+    cantidad_cupos: int = 1
+
+
+class ReservaOut(BaseModel):
+    id_reserva: int
+    id_ruta: int
+    id_pasajero: int
+    estado: EstadoReserva
+    cantidad_cupos: int
+    fecha_reserva: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================
+# Aporte (pago asociado a una reserva)
+# ============================================================
+class AporteOut(BaseModel):
+    id_aporte: int
+    id_reserva: int
+    valor: float
+    estado: EstadoAporte
 
     class Config:
         from_attributes = True

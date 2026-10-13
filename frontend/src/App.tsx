@@ -135,6 +135,7 @@ function App() {
     return (
       <DashboardPasajero
         usuario={usuario}
+        token={token}
         cerrarSesion={cerrarSesion}
         abrirMapa={() => setVista("mapa")}
       />

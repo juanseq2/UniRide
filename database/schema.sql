@@ -9,7 +9,7 @@
 -- ============================================================
 
 -- Tipos enumerados (para que solo se puedan guardar valores válidos)
-CREATE TYPE rol_usuario AS ENUM ('pasajero', 'conductor');
+CREATE TYPE rol_usuario AS ENUM ('pasajero', 'conductor', 'admin');
 CREATE TYPE estado_reserva AS ENUM ('pendiente', 'confirmada', 'rechazada', 'cancelada');
 CREATE TYPE estado_aporte AS ENUM ('pendiente', 'pagado', 'fallido');
 CREATE TYPE estado_alerta AS ENUM ('activa', 'atendida', 'cerrada');
