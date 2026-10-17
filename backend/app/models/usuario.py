@@ -1,8 +1,3 @@
-"""
-Modelos ORM: son clases de Python que SQLAlchemy traduce automáticamente
-a filas de las tablas que ya creamos con schema.sql.
-Cada clase = una tabla. Cada atributo = una columna.
-"""
 from sqlalchemy import Column, Integer, String, Boolean, Numeric, TIMESTAMP, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -14,7 +9,7 @@ from app.database import Base
 class RolUsuario(str, enum.Enum):
     pasajero = "pasajero"
     conductor = "conductor"
-    admin = "admin"  # nuevo: solo se puede crear con el código secreto (ver auth.py)
+    admin = "admin"
 
 
 class Usuario(Base):
@@ -36,9 +31,9 @@ class Conductor(Base):
     __tablename__ = "conductores"
 
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"), primary_key=True)
-    licencia = Column(String(50), nullable=False)
-    soat = Column(String(50), nullable=False)
-    propiedad_vehiculo = Column(String(100))
+    licencia_archivo = Column(String(255))
+    soat_archivo = Column(String(255))
+    tarjeta_propiedad_archivo = Column(String(255))
     documentos_aprobados = Column(Boolean, default=False)
 
     usuario = relationship("Usuario", back_populates="conductor")

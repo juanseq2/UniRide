@@ -1,19 +1,12 @@
 import { useEffect, useState } from "react";
-import type { Usuario } from "../api"
+import type { Usuario, ConductorPendiente } from "../api";
 import {
   listarUsuarios,
   listarConductoresPendientes,
   aprobarConductor,
   rechazarConductor,
+  obtenerDocumentoConductor,
 } from "../api";
-
-interface ConductorPendiente {
-  id_usuario: number;
-  nombre: string;
-  correo_institucional: string;
-  licencia: string;
-  soat: string;
-}
 
 interface AdminDashboardProps {
   usuario: Usuario;
@@ -66,6 +59,15 @@ function AdminDashboard({ usuario, token, cerrarSesion }: AdminDashboardProps) {
       cargarDatos();
     } catch (err: any) {
       setError(err.message);
+    }
+  }
+
+  async function verDocumento(idUsuario: number, tipo: "licencia" | "soat" | "tarjeta_propiedad") {
+    try {
+      const url = await obtenerDocumentoConductor(token, idUsuario, tipo);
+      window.open(url, "_blank");
+    } catch (err: any) {
+      setError(err.message || "No se pudo abrir el documento");
     }
   }
 
@@ -130,7 +132,7 @@ function AdminDashboard({ usuario, token, cerrarSesion }: AdminDashboardProps) {
         <section className="create-route-section">
           <div>
             <h2>Conductores por aprobar</h2>
-            <p>Revisa licencia y SOAT antes de aprobar.</p>
+            <p>Revisa los documentos antes de aprobar.</p>
           </div>
         </section>
 
@@ -145,8 +147,7 @@ function AdminDashboard({ usuario, token, cerrarSesion }: AdminDashboardProps) {
                 <tr>
                   <th>Nombre</th>
                   <th>Correo</th>
-                  <th>Licencia</th>
-                  <th>SOAT</th>
+                  <th>Documentos</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -155,8 +156,17 @@ function AdminDashboard({ usuario, token, cerrarSesion }: AdminDashboardProps) {
                   <tr key={c.id_usuario}>
                     <td>{c.nombre}</td>
                     <td>{c.correo_institucional}</td>
-                    <td>{c.licencia}</td>
-                    <td>{c.soat}</td>
+                    <td className="celda-acciones">
+                      <button className="btn-outline btn-pequeno" onClick={() => verDocumento(c.id_usuario, "licencia")}>
+                        📄 Licencia
+                      </button>
+                      <button className="btn-outline btn-pequeno" onClick={() => verDocumento(c.id_usuario, "soat")}>
+                        📄 SOAT
+                      </button>
+                      <button className="btn-outline btn-pequeno" onClick={() => verDocumento(c.id_usuario, "tarjeta_propiedad")}>
+                        📄 Tarjeta
+                      </button>
+                    </td>
                     <td className="celda-acciones">
                       <button className="btn-primary btn-pequeno" onClick={() => manejarAprobar(c.id_usuario)}>
                         Aprobar

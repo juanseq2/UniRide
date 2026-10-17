@@ -34,10 +34,10 @@ CREATE TABLE usuarios (
 -- ============================================================
 CREATE TABLE conductores (
     id_usuario           INTEGER PRIMARY KEY REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
-    licencia              VARCHAR(50) NOT NULL,
-    soat                   VARCHAR(50) NOT NULL,
-    propiedad_vehiculo     VARCHAR(100),
-    documentos_aprobados   BOOLEAN DEFAULT FALSE
+    documentos_aprobados   BOOLEAN DEFAULT FALSE,
+    licencia_archivo VARCHAR(255), 
+    soat_archivo VARCHAR(255), 
+    tarjeta_propiedad_archivo VARCHAR(255)
 );
 
 -- ============================================================

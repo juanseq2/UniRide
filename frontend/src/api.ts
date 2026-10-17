@@ -29,6 +29,10 @@ export interface Ruta {
   id_conductor: number;
   origen: string;
   destino: string;
+  origen_lat?: number | null;
+  origen_lng?: number | null;
+  destino_lat?: number | null;
+  destino_lng?: number | null;
   fecha: string;
   hora_salida: string;
   cupos_disponibles: number;
@@ -49,6 +53,10 @@ export interface DatosRuta {
   id_vehiculo: number;
   origen: string;
   destino: string;
+  origen_lat: number;
+  origen_lng: number;
+  destino_lat: number;
+  destino_lng: number;
   fecha: string;
   hora_salida: string;
   cupos_disponibles: number;
@@ -77,6 +85,30 @@ export interface Reserva {
   fecha_reserva: string;
 }
 
+export interface PerfilConductor {
+  id_usuario: number;
+  documentos_aprobados: boolean;
+}
+
+export interface ConductorPendiente {
+  id_usuario: number;
+  nombre: string;
+  correo_institucional: string;
+}
+
+export interface ReservaDetalle {
+  id_reserva: number;
+  id_ruta: number;
+  estado: "pendiente" | "confirmada" | "rechazada" | "cancelada";
+  cantidad_cupos: number;
+  fecha_reserva: string;
+  nombre_pasajero: string;
+  origen: string;
+  destino: string;
+  fecha_viaje: string;
+  hora_salida: string;
+}
+
 export class ApiError extends Error {
   readonly status: number;
 
@@ -90,7 +122,6 @@ export class ApiError extends Error {
 async function manejarRespuesta(res: Response) {
   const data = await res.json();
   if (!res.ok) {
-    // FastAPI manda los errores en un campo llamado "detail"
     const detalle = Array.isArray(data.detail)
       ? data.detail.map((error: { msg?: string }) => error.msg).filter(Boolean).join(", ")
       : data.detail;
@@ -118,21 +149,6 @@ export async function listarMisVehiculos(token: string): Promise<Vehiculo[]> {
   return manejarRespuesta(res);
 }
 
-export async function completarPerfilConductor(
-  token: string,
-  datos: { licencia: string; soat: string },
-) {
-  const res = await fetch(`${API_URL}/conductores/perfil`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(datos),
-  });
-  return manejarRespuesta(res);
-}
-
 export async function registrarVehiculo(
   token: string,
   datos: { placa: string; modelo: string; capacidad: number },
@@ -156,6 +172,33 @@ export async function publicarRuta(token: string, datos: DatosRuta): Promise<Rut
       "Content-Type": "application/json",
     },
     body: JSON.stringify(datos),
+  });
+  return manejarRespuesta(res);
+}
+
+// ---- Conductor: documentos (archivo, no texto) ----
+export async function obtenerPerfilConductor(token: string): Promise<PerfilConductor> {
+  const res = await fetch(`${API_URL}/conductores/perfil`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return manejarRespuesta(res);
+}
+
+export async function completarPerfilConductor(
+  token: string,
+  archivos: { licencia: File; soat: File; tarjetaPropiedad: File },
+): Promise<PerfilConductor> {
+  const formData = new FormData();
+  formData.append("licencia", archivos.licencia);
+  formData.append("soat", archivos.soat);
+  formData.append("tarjeta_propiedad", archivos.tarjetaPropiedad);
+
+  const res = await fetch(`${API_URL}/conductores/perfil`, {
+    method: "POST",
+    // OJO: no pongas "Content-Type" aquí. El navegador lo arma solo con
+    // el "boundary" correcto para multipart/form-data; si lo fijas a mano, se rompe.
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
   });
   return manejarRespuesta(res);
 }
@@ -221,7 +264,7 @@ export async function listarUsuarios(token: string): Promise<Usuario[]> {
   return manejarRespuesta(res);
 }
 
-export async function listarConductoresPendientes(token: string) {
+export async function listarConductoresPendientes(token: string): Promise<ConductorPendiente[]> {
   const res = await fetch(`${API_URL}/admin/conductores/pendientes`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -243,3 +286,43 @@ export async function rechazarConductor(token: string, idUsuario: number) {
   });
   return manejarRespuesta(res);
 }
+
+/** Descarga un documento protegido y devuelve una URL local para abrirlo/mostrarlo. */
+export async function obtenerDocumentoConductor(
+  token: string,
+  idUsuario: number,
+  tipo: "licencia" | "soat" | "tarjeta_propiedad",
+): Promise<string> {
+  const res = await fetch(`${API_URL}/admin/conductores/${idUsuario}/documento/${tipo}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new ApiError("No se pudo cargar el documento", res.status);
+  }
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+export async function reservasRecibidas(token: string): Promise<ReservaDetalle[]> {
+  const res = await fetch(`${API_URL}/reservas/recibidas`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return manejarRespuesta(res);
+}
+
+export async function confirmarReserva(token: string, idReserva: number): Promise<Reserva> {
+  const res = await fetch(`${API_URL}/reservas/${idReserva}/confirmar`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return manejarRespuesta(res);
+}
+
+export async function rechazarReserva(token: string, idReserva: number): Promise<Reserva> {
+  const res = await fetch(`${API_URL}/reservas/${idReserva}/rechazar`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return manejarRespuesta(res);
+}
+

@@ -19,7 +19,6 @@ def publicar_ruta(
     conductor: Conductor = Depends(obtener_conductor_actual),
     db: Session = Depends(get_db),
 ):
-    """RF-03: requiere token + ser conductor con perfil completo + dueño del vehículo indicado."""
     vehiculo = db.query(Vehiculo).filter(
         Vehiculo.id_vehiculo == datos.id_vehiculo,
         Vehiculo.id_conductor == conductor.id_usuario,
@@ -37,6 +36,10 @@ def publicar_ruta(
         id_vehiculo=datos.id_vehiculo,
         origen=datos.origen,
         destino=datos.destino,
+        origen_lat=datos.origen_lat,
+        origen_lng=datos.origen_lng,
+        destino_lat=datos.destino_lat,
+        destino_lng=datos.destino_lng,
         fecha=datos.fecha,
         hora_salida=datos.hora_salida,
         cupos_disponibles=datos.cupos_disponibles,
@@ -57,11 +60,6 @@ def buscar_rutas(
     solo_seguras: bool = False,
     db: Session = Depends(get_db),
 ):
-    """
-    RF-04: búsqueda filtrada de rutas. A propósito NO requiere login:
-    cualquiera puede buscar y comparar, solo se necesita login para reservar.
-    Incluye el nombre y la calificación del conductor (join con usuarios).
-    """
     query = (
         db.query(Ruta, Usuario)
         .join(Usuario, Ruta.id_conductor == Usuario.id_usuario)
@@ -85,6 +83,10 @@ def buscar_rutas(
             id_conductor=r.id_conductor,
             origen=r.origen,
             destino=r.destino,
+            origen_lat=r.origen_lat,
+            origen_lng=r.origen_lng,
+            destino_lat=r.destino_lat,
+            destino_lng=r.destino_lng,
             fecha=r.fecha,
             hora_salida=r.hora_salida,
             cupos_disponibles=r.cupos_disponibles,

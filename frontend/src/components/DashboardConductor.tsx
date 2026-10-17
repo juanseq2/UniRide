@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import {
-  ApiError,
   buscarRutas,
-  completarPerfilConductor,
   listarMisVehiculos,
   publicarRuta,
-  registrarVehiculo,
+  reservasRecibidas,
+  confirmarReserva,
+  rechazarReserva,
 } from "../api";
-import type { Ruta, Usuario, Vehiculo } from "../api";
+import type { Ruta, Usuario, Vehiculo, ReservaDetalle } from "../api";
+import BuscadorDireccion from "./BuscadorDireccion";
 
 interface DashboardConductorProps {
   usuario: Usuario;
@@ -28,63 +29,78 @@ function DashboardConductor({ usuario, token, cerrarSesion, abrirMapa }: Dashboa
   const inicial = usuario.nombre.charAt(0).toUpperCase();
   const [rutas, setRutas] = useState<Ruta[]>([]);
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
-  const [requierePerfil, setRequierePerfil] = useState(false);
+  const [reservas, setReservas] = useState<ReservaDetalle[]>([]);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
+  const [procesandoReserva, setProcesandoReserva] = useState<number | null>(null);
+
   const [modalAbierto, setModalAbierto] = useState(false);
   const [publicando, setPublicando] = useState(false);
   const [errorFormulario, setErrorFormulario] = useState<string | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState("");
+
   const [origen, setOrigen] = useState("");
+  const [origenLat, setOrigenLat] = useState<number | null>(null);
+  const [origenLng, setOrigenLng] = useState<number | null>(null);
   const [destino, setDestino] = useState("");
+  const [destinoLat, setDestinoLat] = useState<number | null>(null);
+  const [destinoLng, setDestinoLng] = useState<number | null>(null);
+
   const [fecha, setFecha] = useState(fechaLocalActual);
   const [horaSalida, setHoraSalida] = useState("");
   const [cupos, setCupos] = useState("1");
   const [aporte, setAporte] = useState("");
   const [rutaSegura, setRutaSegura] = useState(false);
-  const [licencia, setLicencia] = useState("");
-  const [soat, setSoat] = useState("");
-  const [placa, setPlaca] = useState("");
-  const [modelo, setModelo] = useState("");
-  const [capacidad, setCapacidad] = useState("4");
+
+  async function cargarTodo() {
+    setCargando(true);
+    setErrorCarga(null);
+    try {
+      const [todasLasRutas, misVehiculos, misReservasRecibidas] = await Promise.all([
+        buscarRutas(),
+        listarMisVehiculos(token),
+        reservasRecibidas(token),
+      ]);
+      setRutas(todasLasRutas.filter((ruta) => ruta.id_conductor === usuario.id_usuario));
+      setVehiculos(misVehiculos);
+      setVehiculoSeleccionado(misVehiculos[0] ? String(misVehiculos[0].id_vehiculo) : "");
+      setReservas(misReservasRecibidas);
+    } catch (error: unknown) {
+      setErrorCarga(error instanceof Error ? error.message : "No se pudo cargar tu información.");
+    } finally {
+      setCargando(false);
+    }
+  }
 
   useEffect(() => {
-    let cancelado = false;
-
-    Promise.all([
-      buscarRutas().then((todas) => {
-        if (!cancelado) setRutas(todas.filter((ruta) => ruta.id_conductor === usuario.id_usuario));
-      }),
-      listarMisVehiculos(token)
-        .then((resultado) => {
-          if (!cancelado) {
-            setVehiculos(resultado);
-            setVehiculoSeleccionado(resultado[0] ? String(resultado[0].id_vehiculo) : "");
-          }
-        })
-        .catch((error: unknown) => {
-          if (cancelado) return;
-          if (error instanceof ApiError && error.status === 400) {
-            setRequierePerfil(true);
-          } else {
-            setErrorCarga(error instanceof Error ? error.message : "No se pudieron cargar tus vehículos.");
-          }
-        }),
-    ])
-      .catch((error: unknown) => {
-        if (!cancelado) {
-          setErrorCarga(error instanceof Error ? error.message : "No se pudieron cargar tus rutas.");
-        }
-      })
-      .finally(() => {
-        if (!cancelado) setCargando(false);
-      });
-
-    return () => {
-      cancelado = true;
-    };
+    cargarTodo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, usuario.id_usuario]);
+
+  async function manejarConfirmar(idReserva: number) {
+    setProcesandoReserva(idReserva);
+    try {
+      await confirmarReserva(token, idReserva);
+      await cargarTodo();
+    } catch (error: unknown) {
+      setErrorCarga(error instanceof Error ? error.message : "No se pudo confirmar la reserva.");
+    } finally {
+      setProcesandoReserva(null);
+    }
+  }
+
+  async function manejarRechazar(idReserva: number) {
+    setProcesandoReserva(idReserva);
+    try {
+      await rechazarReserva(token, idReserva);
+      await cargarTodo();
+    } catch (error: unknown) {
+      setErrorCarga(error instanceof Error ? error.message : "No se pudo rechazar la reserva.");
+    } finally {
+      setProcesandoReserva(null);
+    }
+  }
 
   function abrirFormularioRuta() {
     setErrorFormulario(null);
@@ -96,30 +112,22 @@ function DashboardConductor({ usuario, token, cerrarSesion, abrirMapa }: Dashboa
     evento.preventDefault();
     setErrorFormulario(null);
     setMensajeExito(null);
+
+    if (origenLat == null || origenLng == null || destinoLat == null || destinoLng == null) {
+      setErrorFormulario("Elige el origen y el destino de la lista de sugerencias o desde el mapa.");
+      return;
+    }
+
     setPublicando(true);
-
     try {
-      if (requierePerfil) {
-        await completarPerfilConductor(token, { licencia, soat });
-        setRequierePerfil(false);
-      }
-
-      let vehiculoId = Number(vehiculoSeleccionado);
-      if (vehiculos.length === 0) {
-        const vehiculo = await registrarVehiculo(token, {
-          placa: placa.trim().toUpperCase(),
-          modelo: modelo.trim(),
-          capacidad: Number(capacidad),
-        });
-        setVehiculos([vehiculo]);
-        setVehiculoSeleccionado(String(vehiculo.id_vehiculo));
-        vehiculoId = vehiculo.id_vehiculo;
-      }
-
       const nuevaRuta = await publicarRuta(token, {
-        id_vehiculo: vehiculoId,
+        id_vehiculo: Number(vehiculoSeleccionado),
         origen: origen.trim(),
         destino: destino.trim(),
+        origen_lat: origenLat,
+        origen_lng: origenLng,
+        destino_lat: destinoLat,
+        destino_lng: destinoLng,
         fecha,
         hora_salida: horaSalida,
         cupos_disponibles: Number(cupos),
@@ -127,13 +135,19 @@ function DashboardConductor({ usuario, token, cerrarSesion, abrirMapa }: Dashboa
         ruta_segura: rutaSegura,
       });
 
-      setRutas((actuales) => [...actuales, nuevaRuta].sort((a, b) =>
-        `${a.fecha}T${a.hora_salida}`.localeCompare(`${b.fecha}T${b.hora_salida}`),
-      ));
+      setRutas((actuales) =>
+        [...actuales, nuevaRuta].sort((a, b) =>
+          `${a.fecha}T${a.hora_salida}`.localeCompare(`${b.fecha}T${b.hora_salida}`),
+        ),
+      );
       setMensajeExito("¡Ruta publicada! Ya aparece en tus rutas y en el mapa.");
       setModalAbierto(false);
       setOrigen("");
+      setOrigenLat(null);
+      setOrigenLng(null);
       setDestino("");
+      setDestinoLat(null);
+      setDestinoLng(null);
       setHoraSalida("");
       setAporte("");
       setRutaSegura(false);
@@ -144,14 +158,14 @@ function DashboardConductor({ usuario, token, cerrarSesion, abrirMapa }: Dashboa
     }
   }
 
+  const reservasPendientes = reservas.filter((reserva) => reserva.estado === "pendiente");
+
   return (
     <div className="dashboard">
       <aside className="sidebar">
         <div className="sidebar-logo">🚗 UniRide</div>
         <div className="sidebar-menu">
           <button className="menu-item active">🏠 Inicio</button>
-          <button className="menu-item" onClick={abrirMapa}>🛣️ Mis rutas</button>
-          <button className="menu-item">👥 Pasajeros</button>
           <button className="menu-item">🚗 Mi vehículo</button>
           <button className="menu-item">📊 Historial</button>
           <button className="menu-item">👤 Mi perfil</button>
@@ -183,14 +197,67 @@ function DashboardConductor({ usuario, token, cerrarSesion, abrirMapa }: Dashboa
             <div><p>Rutas publicadas</p><strong>{rutas.length}</strong></div>
           </div>
           <div className="stat-card">
-            <span>👥</span>
-            <div><p>Cupos disponibles</p><strong>{rutas.reduce((total, ruta) => total + ruta.cupos_disponibles, 0)}</strong></div>
+            <span>🕓</span>
+            <div><p>Reservas pendientes</p><strong>{reservasPendientes.length}</strong></div>
           </div>
           <div className="stat-card">
             <span>⭐</span>
             <div><p>Calificación</p><strong>{usuario.calificacion_promedio}</strong></div>
           </div>
         </section>
+
+        <section className="create-route-section">
+          <div>
+            <h2>Reservas pendientes</h2>
+            <p>Pasajeros esperando que confirmes su cupo.</p>
+          </div>
+        </section>
+
+        {cargando ? (
+          <p>Cargando reservas...</p>
+        ) : reservasPendientes.length === 0 ? (
+          <p>No tienes reservas pendientes por el momento.</p>
+        ) : (
+          <div className="tabla-admin-contenedor">
+            <table className="tabla-admin">
+              <thead>
+                <tr>
+                  <th>Pasajero</th>
+                  <th>Ruta</th>
+                  <th>Fecha</th>
+                  <th>Cupos</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reservasPendientes.map((reserva) => (
+                  <tr key={reserva.id_reserva}>
+                    <td>{reserva.nombre_pasajero}</td>
+                    <td>{reserva.origen} → {reserva.destino}</td>
+                    <td>{new Date(`${reserva.fecha_viaje}T00:00:00`).toLocaleDateString("es-CO")} · {reserva.hora_salida.slice(0, 5)}</td>
+                    <td>{reserva.cantidad_cupos}</td>
+                    <td className="celda-acciones">
+                      <button
+                        className="btn-primary btn-pequeno"
+                        disabled={procesandoReserva === reserva.id_reserva}
+                        onClick={() => manejarConfirmar(reserva.id_reserva)}
+                      >
+                        {procesandoReserva === reserva.id_reserva ? "..." : "Confirmar"}
+                      </button>
+                      <button
+                        className="btn-outline btn-pequeno"
+                        disabled={procesandoReserva === reserva.id_reserva}
+                        onClick={() => manejarRechazar(reserva.id_reserva)}
+                      >
+                        Rechazar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <section className="create-route-section">
           <div>
@@ -206,7 +273,6 @@ function DashboardConductor({ usuario, token, cerrarSesion, abrirMapa }: Dashboa
           <p>Cargando tus rutas...</p>
         ) : rutas.length === 0 ? (
           <section className="route-empty">
-            <span>🛣️</span>
             <h3>Aún no tienes rutas publicadas</h3>
             <p>Crea una ruta para que otros pasajeros puedan encontrarla.</p>
           </section>
@@ -230,9 +296,12 @@ function DashboardConductor({ usuario, token, cerrarSesion, abrirMapa }: Dashboa
       </main>
 
       {modalAbierto && (
-        <div className="route-modal-backdrop" onMouseDown={(event) => {
-          if (event.target === event.currentTarget && !publicando) setModalAbierto(false);
-        }}>
+        <div
+          className="route-modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !publicando) setModalAbierto(false);
+          }}
+        >
           <section className="route-modal" role="dialog" aria-modal="true" aria-labelledby="route-modal-title">
             <div className="route-modal-header">
               <div>
@@ -243,58 +312,40 @@ function DashboardConductor({ usuario, token, cerrarSesion, abrirMapa }: Dashboa
             </div>
 
             <form className="route-form" onSubmit={manejarPublicacion}>
-              {requierePerfil && (
-                <fieldset className="route-form-section">
-                  <legend>Completa tu perfil de conductor</legend>
-                  <label>
-                    Número de licencia
-                    <input value={licencia} onChange={(event) => setLicencia(event.target.value)} required />
-                  </label>
-                  <label>
-                    SOAT
-                    <input value={soat} onChange={(event) => setSoat(event.target.value)} required />
-                  </label>
-                </fieldset>
-              )}
+              <label>
+                Vehículo
+                <select value={vehiculoSeleccionado} onChange={(event) => setVehiculoSeleccionado(event.target.value)} required>
+                  {vehiculos.map((vehiculo) => (
+                    <option key={vehiculo.id_vehiculo} value={vehiculo.id_vehiculo}>
+                      {[vehiculo.modelo, vehiculo.placa].filter(Boolean).join(" · ")}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-              {vehiculos.length > 0 ? (
-                <label>
-                  Vehículo
-                  <select value={vehiculoSeleccionado} onChange={(event) => setVehiculoSeleccionado(event.target.value)} required>
-                    {vehiculos.map((vehiculo) => (
-                      <option key={vehiculo.id_vehiculo} value={vehiculo.id_vehiculo}>
-                        {[vehiculo.modelo, vehiculo.placa].filter(Boolean).join(" · ")}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : (
-                <fieldset className="route-form-section">
-                  <legend>Registra el vehículo</legend>
-                  <label>
-                    Placa
-                    <input value={placa} onChange={(event) => setPlaca(event.target.value)} maxLength={10} required />
-                  </label>
-                  <label>
-                    Modelo (opcional)
-                    <input value={modelo} onChange={(event) => setModelo(event.target.value)} maxLength={100} />
-                  </label>
-                  <label>
-                    Capacidad total del vehículo
-                    <input type="number" min="2" max="100" value={capacidad} onChange={(event) => setCapacidad(event.target.value)} required />
-                  </label>
-                </fieldset>
-              )}
+              <BuscadorDireccion
+                etiqueta="Origen"
+                valor={origen}
+                placeholder="Ej. Centro Comercial Santafé, Bogotá"
+                onSeleccionar={(direccion, lat, lng) => {
+                  setOrigen(direccion);
+                  setOrigenLat(lat);
+                  setOrigenLng(lng);
+                }}
+              />
+
+              <BuscadorDireccion
+                etiqueta="Destino"
+                valor={destino}
+                placeholder="Ej. UNIMINUTO, Bogotá"
+                onSeleccionar={(direccion, lat, lng) => {
+                  setDestino(direccion);
+                  setDestinoLat(lat);
+                  setDestinoLng(lng);
+                }}
+              />
 
               <div className="route-form-grid">
-                <label>
-                  Origen
-                  <input value={origen} onChange={(event) => setOrigen(event.target.value)} maxLength={200} placeholder="Ej. Portal Norte, Bogotá" required />
-                </label>
-                <label>
-                  Destino
-                  <input value={destino} onChange={(event) => setDestino(event.target.value)} maxLength={200} placeholder="Ej. UNIMINUTO, Bogotá" required />
-                </label>
                 <label>
                   Fecha
                   <input type="date" min={fechaLocalActual()} value={fecha} onChange={(event) => setFecha(event.target.value)} required />
@@ -305,7 +356,14 @@ function DashboardConductor({ usuario, token, cerrarSesion, abrirMapa }: Dashboa
                 </label>
                 <label>
                   Cupos disponibles
-                  <input type="number" min="1" max={vehiculos.find((v) => String(v.id_vehiculo) === vehiculoSeleccionado)?.capacidad ?? Number(capacidad)} value={cupos} onChange={(event) => setCupos(event.target.value)} required />
+                  <input
+                    type="number"
+                    min="1"
+                    max={vehiculos.find((v) => String(v.id_vehiculo) === vehiculoSeleccionado)?.capacidad}
+                    value={cupos}
+                    onChange={(event) => setCupos(event.target.value)}
+                    required
+                  />
                 </label>
                 <label>
                   Aporte sugerido (COP)

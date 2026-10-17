@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -42,11 +44,37 @@ def conductores_pendientes(
             id_usuario=u.id_usuario,
             nombre=u.nombre,
             correo_institucional=u.correo_institucional,
-            licencia=c.licencia,
-            soat=c.soat,
         )
         for u, c in resultados
     ]
+
+
+@router.get("/conductores/{id_usuario}/documento/{tipo}")
+def ver_documento_conductor(
+    id_usuario: int,
+    tipo: str,
+    usuario: Usuario = Depends(obtener_usuario_actual),
+    db: Session = Depends(get_db),
+):
+    """
+    Sirve el archivo (licencia, soat o tarjeta_propiedad) de un conductor.
+    Protegido: solo un admin autenticado puede verlo, nunca es un archivo público.
+    """
+    _verificar_admin(usuario)
+    conductor = db.query(Conductor).filter(Conductor.id_usuario == id_usuario).first()
+    if not conductor:
+        raise HTTPException(status_code=404, detail="Conductor no encontrado")
+
+    mapa = {
+        "licencia": conductor.licencia_archivo,
+        "soat": conductor.soat_archivo,
+        "tarjeta_propiedad": conductor.tarjeta_propiedad_archivo,
+    }
+    ruta = mapa.get(tipo)
+    if not ruta or not Path(ruta).exists():
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+    return FileResponse(ruta)
 
 
 @router.patch("/conductores/{id_usuario}/aprobar", response_model=schemas.ConductorOut)

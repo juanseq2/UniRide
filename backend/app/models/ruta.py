@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Numeric, Date, Time, TIMESTAMP, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, Numeric, Date, Time, Float, TIMESTAMP, ForeignKey
 from sqlalchemy.sql import func
 
 from app.database import Base
@@ -12,6 +12,10 @@ class Ruta(Base):
     id_vehiculo = Column(Integer, ForeignKey("vehiculos.id_vehiculo"), nullable=False)
     origen = Column(String(200), nullable=False)
     destino = Column(String(200), nullable=False)
+    origen_lat = Column(Float)
+    origen_lng = Column(Float)
+    destino_lat = Column(Float)
+    destino_lng = Column(Float)
     fecha = Column(Date, nullable=False)
     hora_salida = Column(Time, nullable=False)
     cupos_disponibles = Column(Integer, nullable=False)

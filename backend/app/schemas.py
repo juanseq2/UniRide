@@ -3,13 +3,13 @@ Los 'schemas' son distintos de los 'models' (app/models/...).
 - models = cómo se ve la tabla en la base de datos
 - schemas = cómo se ve el JSON que entra/sale de la API
 """
-from datetime import date, time
+from datetime import date, time, datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, field_validator
-from app.models.usuario import RolUsuario
 
-from datetime import datetime
-from app.models.reserva import EstadoReserva  
+from pydantic import BaseModel, EmailStr, field_validator
+
+from app.models.usuario import RolUsuario
+from app.models.reserva import EstadoReserva
 from app.models.aporte import EstadoAporte
 
 
@@ -22,7 +22,7 @@ class UsuarioRegistro(BaseModel):
     telefono: Optional[str] = None
     password: str
     rol: RolUsuario
-    codigo_admin: Optional[str] = None  # solo se valida si rol == admin
+    codigo_admin: Optional[str] = None
 
     @field_validator("correo_institucional")
     @classmethod
@@ -51,22 +51,14 @@ class UsuarioOut(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    rol: RolUsuario  # lo agregaste tú: así el frontend sabe a qué dashboard mandar sin otra petición
+    rol: RolUsuario
 
 
 # ============================================================
-# Conductor (RF-02: verificación de conductor)
+# Conductor (RF-02)
 # ============================================================
-class ConductorPerfil(BaseModel):
-    licencia: str
-    soat: str
-    propiedad_vehiculo: Optional[str] = None
-
-
 class ConductorOut(BaseModel):
     id_usuario: int
-    licencia: str
-    soat: str
     documentos_aprobados: bool
 
     class Config:
@@ -74,12 +66,9 @@ class ConductorOut(BaseModel):
 
 
 class ConductorPendienteOut(BaseModel):
-    """Lo que ve el admin en la lista de conductores por aprobar (junta datos de 2 tablas)."""
     id_usuario: int
     nombre: str
     correo_institucional: str
-    licencia: str
-    soat: str
 
 
 # ============================================================
@@ -102,12 +91,16 @@ class VehiculoOut(BaseModel):
 
 
 # ============================================================
-# Ruta (RF-03: publicar, RF-04: buscar)
+# Ruta (RF-03, RF-04) — ahora con coordenadas de origen/destino
 # ============================================================
 class RutaCreate(BaseModel):
     id_vehiculo: int
     origen: str
     destino: str
+    origen_lat: float
+    origen_lng: float
+    destino_lat: float
+    destino_lng: float
     fecha: date
     hora_salida: time
     cupos_disponibles: int
@@ -120,6 +113,10 @@ class RutaOut(BaseModel):
     id_conductor: int
     origen: str
     destino: str
+    origen_lat: Optional[float] = None
+    origen_lng: Optional[float] = None
+    destino_lat: Optional[float] = None
+    destino_lng: Optional[float] = None
     fecha: date
     hora_salida: time
     cupos_disponibles: int
@@ -127,12 +124,13 @@ class RutaOut(BaseModel):
     ruta_segura: bool
     nombre_conductor: Optional[str] = None
     calificacion_conductor: Optional[float] = None
-    
+
     class Config:
         from_attributes = True
 
+
 # ============================================================
-# Reserva (RF-05)
+# Reserva
 # ============================================================
 class ReservaCreate(BaseModel):
     id_ruta: int
@@ -151,8 +149,21 @@ class ReservaOut(BaseModel):
         from_attributes = True
 
 
+class ReservaDetalleOut(BaseModel):
+    id_reserva: int
+    id_ruta: int
+    estado: EstadoReserva
+    cantidad_cupos: int
+    fecha_reserva: datetime
+    nombre_pasajero: str
+    origen: str
+    destino: str
+    fecha_viaje: date
+    hora_salida: time
+
+
 # ============================================================
-# Aporte (pago asociado a una reserva)
+# Aporte
 # ============================================================
 class AporteOut(BaseModel):
     id_aporte: int
@@ -162,3 +173,5 @@ class AporteOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+

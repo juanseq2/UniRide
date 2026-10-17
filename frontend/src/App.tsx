@@ -1,20 +1,21 @@
 import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
 import "./App.css";
-import { registrarUsuario, iniciarSesion, obtenerPerfil} from "./api";
-import type { Usuario } from "./api"
+import { registrarUsuario, iniciarSesion, obtenerPerfil, obtenerPerfilConductor, listarMisVehiculos, ApiError } from "./api";
+import type { Usuario } from "./api";
 import Index from "./components/Index";
 import DashboardConductor from "./components/DashboardConductor";
-import DashboardPasajero from "./components/DashboardPasajero";
 import AdminDashboard from "./components/AdminDashboard";
 import MapaViajes from "./components/MapaViajes";
+import OnboardingConductor from "./components/OnboardingConductor";
 
-type Vista = "index" | "formulario" | "dashboard" | "mapa";
+type Vista = "index" | "formulario" | "dashboard" | "mapa" | "onboarding";
 
 function App() {
   const [vista, setVista] = useState<Vista>("index");
   const [formulario, setFormulario] = useState<"login" | "registro">("login");
   const [cargandoInicial, setCargandoInicial] = useState(true);
+  const [pasoOnboarding, setPasoOnboarding] = useState<"perfil" | "vehiculo">("perfil");
 
   // Campos de los formularios
   const [nombre, setNombre] = useState("");
@@ -30,8 +31,33 @@ function App() {
   const [token, setToken] = useState<string | null>(null);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
 
-  // Al cargar la app, si hay un token guardado, intenta recuperar la sesión
-  // (para que recargar la página no mande siempre al inicio)
+  async function decidirVistaConductor(tok: string) {
+    try {
+      await obtenerPerfilConductor(tok);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        setPasoOnboarding("perfil");
+        setVista("onboarding");
+        return;
+      }
+      setVista("dashboard");
+      return;
+    }
+
+    try {
+      const vehiculos = await listarMisVehiculos(tok);
+      if (vehiculos.length === 0) {
+        setPasoOnboarding("vehiculo");
+        setVista("onboarding");
+        return;
+      }
+    } catch {
+      // si falla la consulta de vehículos, no bloqueamos el acceso por eso
+    }
+
+    setVista("dashboard");
+  }
+
   useEffect(() => {
     const tokenGuardado = localStorage.getItem("token");
     if (!tokenGuardado) {
@@ -39,10 +65,14 @@ function App() {
       return;
     }
     obtenerPerfil(tokenGuardado)
-      .then((perfil) => {
+      .then(async (perfil) => {
         setToken(tokenGuardado);
         setUsuario(perfil);
-        setVista("dashboard");
+        if (perfil.rol === "conductor") {
+          await decidirVistaConductor(tokenGuardado);
+        } else {
+          setVista("dashboard");
+        }
       })
       .catch(() => {
         localStorage.removeItem("token");
@@ -81,7 +111,12 @@ function App() {
 
       const perfil = await obtenerPerfil(resultado.access_token);
       setUsuario(perfil);
-      setVista("dashboard");
+
+      if (perfil.rol === "conductor") {
+        await decidirVistaConductor(resultado.access_token);
+      } else {
+        setVista("dashboard");
+      }
     } catch (err: any) {
       setError(err.message);
     }
@@ -101,10 +136,25 @@ function App() {
     return <div className="cargando-pantalla">Cargando UniRide...</div>;
   }
 
+  // --- Onboarding obligatorio del conductor ---
+  if (vista === "onboarding" && token) {
+    return (
+      <OnboardingConductor
+        token={token}
+        paso={pasoOnboarding}
+        onPerfilCompleto={() => setPasoOnboarding("vehiculo")}
+        onVehiculoCompleto={() => setVista("dashboard")}
+        cerrarSesion={cerrarSesion}
+      />
+    );
+  }
+
+  // --- Mapa como vista secundaria (lo usa el conductor desde "Mis rutas") ---
   if (vista === "mapa") {
     return (
       <MapaViajes
         usuario={usuario}
+        token={token}
         volver={() => setVista(usuario ? "dashboard" : "index")}
         iniciarSesion={() => {
           setFormulario("login");
@@ -132,12 +182,19 @@ function App() {
         />
       );
     }
+    // Pasajero: el mapa ES su dashboard principal (incluye buscar, ver y reservar)
     return (
-      <DashboardPasajero
+      <MapaViajes
         usuario={usuario}
         token={token}
+        volver={() => setVista("dashboard")}
+        iniciarSesion={() => {
+          setFormulario("login");
+          setError(null);
+          setMensaje(null);
+          setVista("formulario");
+        }}
         cerrarSesion={cerrarSesion}
-        abrirMapa={() => setVista("mapa")}
       />
     );
   }

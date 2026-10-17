@@ -20,7 +20,6 @@ def reservar_cupo(
     usuario: Usuario = Depends(obtener_usuario_actual),
     db: Session = Depends(get_db),
 ):
-    """RF-05: un pasajero reserva cupos en una ruta. Crea además el aporte (pago) pendiente."""
     if usuario.rol.value != "pasajero":
         raise HTTPException(status_code=403, detail="Solo los pasajeros pueden reservar cupos")
 
@@ -38,10 +37,7 @@ def reservar_cupo(
         estado=EstadoReserva.pendiente,
     )
     db.add(nueva_reserva)
-
-    # Descontamos los cupos de inmediato para que nadie más los tome mientras se confirma
     ruta.cupos_disponibles -= datos.cantidad_cupos
-
     db.commit()
     db.refresh(nueva_reserva)
 
@@ -61,22 +57,38 @@ def mis_reservas(
     usuario: Usuario = Depends(obtener_usuario_actual),
     db: Session = Depends(get_db),
 ):
-    """Reservas que ha hecho el pasajero logueado."""
     return db.query(Reserva).filter(Reserva.id_pasajero == usuario.id_usuario).all()
 
 
-@router.get("/recibidas", response_model=List[schemas.ReservaOut])
+@router.get("/recibidas", response_model=List[schemas.ReservaDetalleOut])
 def reservas_recibidas(
     conductor: Conductor = Depends(obtener_conductor_actual),
     db: Session = Depends(get_db),
 ):
-    """Reservas que los pasajeros han hecho sobre las rutas de este conductor."""
-    return (
-        db.query(Reserva)
+    """Reservas que los pasajeros han hecho sobre las rutas de este conductor, con detalle."""
+    resultados = (
+        db.query(Reserva, Ruta, Usuario)
         .join(Ruta, Reserva.id_ruta == Ruta.id_ruta)
+        .join(Usuario, Reserva.id_pasajero == Usuario.id_usuario)
         .filter(Ruta.id_conductor == conductor.id_usuario)
+        .order_by(Reserva.fecha_reserva.desc())
         .all()
     )
+    return [
+        schemas.ReservaDetalleOut(
+            id_reserva=reserva.id_reserva,
+            id_ruta=reserva.id_ruta,
+            estado=reserva.estado,
+            cantidad_cupos=reserva.cantidad_cupos,
+            fecha_reserva=reserva.fecha_reserva,
+            nombre_pasajero=pasajero.nombre,
+            origen=ruta.origen,
+            destino=ruta.destino,
+            fecha_viaje=ruta.fecha,
+            hora_salida=ruta.hora_salida,
+        )
+        for reserva, ruta, pasajero in resultados
+    ]
 
 
 def _reserva_de_una_ruta_del_conductor(id_reserva: int, conductor: Conductor, db: Session) -> Reserva:
@@ -111,7 +123,7 @@ def rechazar_reserva(
     reserva = _reserva_de_una_ruta_del_conductor(id_reserva, conductor, db)
     if reserva.estado != EstadoReserva.rechazada:
         ruta = db.query(Ruta).filter(Ruta.id_ruta == reserva.id_ruta).first()
-        ruta.cupos_disponibles += reserva.cantidad_cupos  # devolvemos los cupos
+        ruta.cupos_disponibles += reserva.cantidad_cupos
         reserva.estado = EstadoReserva.rechazada
         db.commit()
         db.refresh(reserva)
@@ -124,7 +136,6 @@ def cancelar_reserva(
     usuario: Usuario = Depends(obtener_usuario_actual),
     db: Session = Depends(get_db),
 ):
-    """El propio pasajero cancela su reserva."""
     reserva = db.query(Reserva).filter(Reserva.id_reserva == id_reserva).first()
     if not reserva:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")

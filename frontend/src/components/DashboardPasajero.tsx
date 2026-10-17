@@ -133,39 +133,7 @@ function DashboardPasajero({ usuario, token, cerrarSesion, abrirMapa }: Dashboar
         {error && <p className="error">{error}</p>}
         {mensajeExito && <p className="exito">{mensajeExito}</p>}
 
-        <section className="search-card">
 
-          <h2>¿A dónde quieres ir?</h2>
-
-          <form className="search-fields" onSubmit={manejarBuscar}>
-
-            <div className="input-group">
-              <label>Origen</label>
-              <input
-                type="text"
-                placeholder="¿Desde dónde?"
-                value={origen}
-                onChange={(e) => setOrigen(e.target.value)}
-              />
-            </div>
-
-            <div className="input-group">
-              <label>Destino</label>
-              <input
-                type="text"
-                placeholder="¿A dónde?"
-                value={destino}
-                onChange={(e) => setDestino(e.target.value)}
-              />
-            </div>
-
-            <button type="submit" className="btn-primary search-button">
-              🔎 Buscar
-            </button>
-
-          </form>
-
-        </section>
 
         <section>
 
