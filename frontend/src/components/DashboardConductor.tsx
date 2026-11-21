@@ -165,10 +165,25 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
       <aside className="sidebar">
         <div className="sidebar-logo">🚗 UniRide</div>
         <div className="sidebar-menu">
-          <button className="menu-item active">🏠 Inicio</button>
-          <button className="menu-item">🚗 Mi vehículo</button>
-          <button className="menu-item">📊 Historial</button>
-          <button className="menu-item">👤 Mi perfil</button>
+          <button
+            className="menu-item active"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          >
+            🏠 Inicio
+          </button>
+          <button className="menu-item" onClick={abrirFormularioRuta}>🚗 Mi vehículo</button>
+          <button
+            className="menu-item"
+            onClick={() => document.querySelector(".create-route-section")?.scrollIntoView({ behavior: "smooth" })}
+          >
+            📊 Historial
+          </button>
+          <button
+            className="menu-item"
+            onClick={() => document.querySelector(".dashboard-header")?.scrollIntoView({ behavior: "smooth" })}
+          >
+            👤 Mi perfil
+          </button>
         </div>
         <button className="logout-button" onClick={cerrarSesion}>🚪 Cerrar sesión</button>
       </aside>

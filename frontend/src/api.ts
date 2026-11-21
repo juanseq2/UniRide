@@ -124,11 +124,27 @@ export class ApiError extends Error {
 }
 
 async function manejarRespuesta(res: Response) {
-  const data = await res.json();
+  const texto = await res.text();
+  let data: unknown = null;
+  try {
+    data = texto ? JSON.parse(texto) : null;
+  } catch {
+    if (!res.ok) {
+      throw new ApiError(
+        texto?.trim() || "El servidor devolvió una respuesta no válida",
+        res.status,
+      );
+    }
+    throw new ApiError("El servidor devolvió una respuesta no válida", res.status);
+  }
   if (!res.ok) {
-    const detalle = Array.isArray(data.detail)
-      ? data.detail.map((error: { msg?: string }) => error.msg).filter(Boolean).join(", ")
-      : data.detail;
+    const contenido =
+      data && typeof data === "object"
+        ? data as { detail?: string | { msg?: string }[] }
+        : null;
+    const detalle = Array.isArray(contenido?.detail)
+      ? contenido.detail.map((error) => error.msg).filter(Boolean).join(", ")
+      : contenido?.detail;
     throw new ApiError(detalle || "Ocurrió un error inesperado", res.status);
   }
   return data;
