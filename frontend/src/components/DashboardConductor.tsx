@@ -8,6 +8,7 @@ import {
   confirmarReserva,
   rechazarReserva,
   iniciarViaje,
+  registrarVehiculo,
 } from "../api";
 import type { Ruta, Usuario, Vehiculo, ReservaDetalle } from "../api";
 import BuscadorDireccion from "./BuscadorDireccion";
@@ -53,6 +54,11 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
   const [cupos, setCupos] = useState("1");
   const [rutaSegura, setRutaSegura] = useState(false);
   const [iniciandoRuta, setIniciandoRuta] = useState<number | null>(null);
+  const [placaVehiculo, setPlacaVehiculo] = useState("");
+  const [modeloVehiculo, setModeloVehiculo] = useState("");
+  const [tipoVehiculo, setTipoVehiculo] = useState<"moto" | "carro">("carro");
+  const [capacidadVehiculo, setCapacidadVehiculo] = useState("4");
+  const [registrandoVehiculo, setRegistrandoVehiculo] = useState(false);
 
   async function cargarTodo() {
     setCargando(true);
@@ -143,9 +149,36 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
     }
   }
 
+  async function manejarRegistrarVehiculo(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setRegistrandoVehiculo(true);
+    setErrorCarga(null);
+    setMensajeExito(null);
+    try {
+      const nuevoVehiculo = await registrarVehiculo(token, {
+        placa: placaVehiculo.trim().toUpperCase(),
+        modelo: modeloVehiculo.trim(),
+        tipo: tipoVehiculo,
+        capacidad: Number(capacidadVehiculo),
+      });
+      setVehiculos((actuales) => [...actuales, nuevoVehiculo]);
+      setVehiculoSeleccionado(String(nuevoVehiculo.id_vehiculo));
+      setPlacaVehiculo("");
+      setModeloVehiculo("");
+      setMensajeExito("Vehículo registrado correctamente.");
+    } catch (error: unknown) {
+      setErrorCarga(error instanceof Error ? error.message : "No se pudo registrar el vehículo.");
+    } finally {
+      setRegistrandoVehiculo(false);
+    }
+  }
+
   function abrirFormularioRuta() {
     setErrorFormulario(null);
     setMensajeExito(null);
+    if (vehiculos.length === 0) {
+      setErrorCarga("Primero registra un vehículo en la sección Mi vehículo.");
+    }
     setModalAbierto(true);
   }
 
@@ -299,6 +332,46 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
               </p>
             ))
           )}
+          <form className="route-form" onSubmit={manejarRegistrarVehiculo}>
+            <label>
+              Placa
+              <input
+                value={placaVehiculo}
+                onChange={(evento) => setPlacaVehiculo(evento.target.value)}
+                maxLength={10}
+                required
+              />
+            </label>
+            <label>
+              Modelo
+              <input
+                value={modeloVehiculo}
+                onChange={(evento) => setModeloVehiculo(evento.target.value)}
+                maxLength={100}
+              />
+            </label>
+            <label>
+              Tipo
+              <select value={tipoVehiculo} onChange={(evento) => setTipoVehiculo(evento.target.value as "moto" | "carro")}>
+                <option value="carro">Carro - $1.000 por km</option>
+                <option value="moto">Moto - $500 por km</option>
+              </select>
+            </label>
+            <label>
+              Capacidad
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={capacidadVehiculo}
+                onChange={(evento) => setCapacidadVehiculo(evento.target.value)}
+                required
+              />
+            </label>
+            <button className="btn-primary" type="submit" disabled={registrandoVehiculo}>
+              {registrandoVehiculo ? "Registrando..." : "Registrar vehículo"}
+            </button>
+          </form>
         </section>
 
         {mensajeExito && <p className="exito">{mensajeExito}</p>}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
 import "./App.css";
-import { registrarUsuario, iniciarSesion, obtenerPerfil, obtenerPerfilConductor, listarMisVehiculos, ApiError } from "./api";
+import { registrarUsuario, iniciarSesion, obtenerPerfil, ApiError } from "./api";
 import type { Usuario } from "./api";
 import Index from "./components/Index";
 import DashboardConductor from "./components/DashboardConductor";
@@ -32,29 +32,7 @@ function App() {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
 
   async function decidirVistaConductor(tok: string) {
-    try {
-      await obtenerPerfilConductor(tok);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
-        setPasoOnboarding("perfil");
-        setVista("onboarding");
-        return;
-      }
-      setVista("dashboard");
-      return;
-    }
-
-    try {
-      const vehiculos = await listarMisVehiculos(tok);
-      if (vehiculos.length === 0) {
-        setPasoOnboarding("vehiculo");
-        setVista("onboarding");
-        return;
-      }
-    } catch {
-      // si falla la consulta de vehículos, no bloqueamos el acceso por eso
-    }
-
+    void tok;
     setVista("dashboard");
   }
 
