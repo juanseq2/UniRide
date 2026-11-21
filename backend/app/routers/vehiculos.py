@@ -27,6 +27,9 @@ def registrar_vehiculo(
     if conductor is None:
         conductor = Conductor(
             id_usuario=usuario.id_usuario,
+            licencia_archivo="",
+            soat_archivo="",
+            tarjeta_propiedad_archivo="",
             documentos_aprobados=False,
         )
         db.add(conductor)
