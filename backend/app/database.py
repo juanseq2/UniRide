@@ -25,8 +25,14 @@ if DATABASE_URL.startswith("postgresql://"):
     if "sslmode=" not in DATABASE_URL:
         DATABASE_URL = f"{DATABASE_URL}{separator}sslmode=require"
 
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+
 # El "engine" es el objeto que sabe hablar con PostgreSQL
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+)
 
 # Cada vez que atendemos una petición, abrimos una "sesión" (conversación con la BD)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
