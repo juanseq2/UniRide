@@ -57,15 +57,36 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
     setCargando(true);
     setErrorCarga(null);
     try {
-      const [todasLasRutas, misVehiculos, misReservasRecibidas] = await Promise.all([
+      const [resultadoRutas, resultadoVehiculos, resultadoReservas] = await Promise.allSettled([
         buscarRutas(),
         listarMisVehiculos(token),
         reservasRecibidas(token),
       ]);
-      setRutas(todasLasRutas.filter((ruta) => ruta.id_conductor === usuario.id_usuario));
-      setVehiculos(misVehiculos);
-      setVehiculoSeleccionado(misVehiculos[0] ? String(misVehiculos[0].id_vehiculo) : "");
-      setReservas(misReservasRecibidas);
+
+      if (resultadoRutas.status === "fulfilled") {
+        setRutas(resultadoRutas.value.filter((ruta) => ruta.id_conductor === usuario.id_usuario));
+      }
+
+      if (resultadoVehiculos.status === "fulfilled") {
+        setVehiculos(resultadoVehiculos.value);
+        setVehiculoSeleccionado(
+          resultadoVehiculos.value[0]
+            ? String(resultadoVehiculos.value[0].id_vehiculo)
+            : "",
+        );
+      }
+
+      if (resultadoReservas.status === "fulfilled") {
+        setReservas(resultadoReservas.value);
+      }
+
+      const errores = [resultadoRutas, resultadoVehiculos, resultadoReservas]
+        .filter((resultado): resultado is PromiseRejectedResult => resultado.status === "rejected")
+        .map((resultado) => resultado.reason instanceof Error ? resultado.reason.message : "Error desconocido");
+
+      if (errores.length > 0) {
+        setErrorCarga(`No se pudo cargar: ${errores.join(". ")}`);
+      }
     } catch (error: unknown) {
       setErrorCarga(error instanceof Error ? error.message : "No se pudo cargar tu información.");
     } finally {

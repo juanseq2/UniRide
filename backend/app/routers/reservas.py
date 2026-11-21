@@ -66,14 +66,21 @@ def reservas_recibidas(
     db: Session = Depends(get_db),
 ):
     """Reservas que los pasajeros han hecho sobre las rutas de este conductor, con detalle."""
-    resultados = (
-        db.query(Reserva, Ruta, Usuario)
-        .join(Ruta, Reserva.id_ruta == Ruta.id_ruta)
-        .join(Usuario, Reserva.id_pasajero == Usuario.id_usuario)
-        .filter(Ruta.id_conductor == conductor.id_usuario)
-        .order_by(Reserva.fecha_reserva.desc())
-        .all()
-    )
+    try:
+        resultados = (
+            db.query(Reserva, Ruta, Usuario)
+            .join(Ruta, Reserva.id_ruta == Ruta.id_ruta)
+            .join(Usuario, Reserva.id_pasajero == Usuario.id_usuario)
+            .filter(Ruta.id_conductor == conductor.id_usuario)
+            .order_by(Reserva.fecha_reserva.desc())
+            .all()
+        )
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudieron consultar las reservas recibidas",
+        ) from exc
     return [
         schemas.ReservaDetalleOut(
             id_reserva=reserva.id_reserva,
