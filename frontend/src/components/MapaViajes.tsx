@@ -2,8 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { buscarRutas, reservarCupo, ApiError } from "../api";
-import type { Ruta, Usuario } from "../api";
+import { buscarRutas, reservarCupo, misReservas, cancelarReserva, ApiError } from "../api";
+import type { Reserva, Ruta, Usuario } from "../api";
 import { acortarDireccion } from "../utils"; 
 
 interface MapaViajesProps {
@@ -37,6 +37,13 @@ function MapaViajes({
   const [error, setError] = useState<string | null>(null);
   const [mensajeReserva, setMensajeReserva] = useState<string | null>(null);
   const [errorReserva, setErrorReserva] = useState<string | null>(null);
+  const [seccionPasajero, setSeccionPasajero] =
+    useState<"mapa" | "viajes" | "calificaciones" | "perfil">("mapa");
+  const [reservas, setReservas] = useState<Reserva[]>([]);
+  const [cargandoSeccion, setCargandoSeccion] = useState(false);
+  const [errorSeccion, setErrorSeccion] = useState<string | null>(null);
+  const [cancelandoReserva, setCancelandoReserva] = useState<number | null>(null);
+  const esDashboardPasajero = usuario?.rol === "pasajero";
 
   // --------------------------------------------------
   // INICIALIZAR MAPA
@@ -104,6 +111,31 @@ function MapaViajes({
       cancelado = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!esDashboardPasajero || seccionPasajero !== "viajes" || !token) return;
+
+    let cancelado = false;
+    setCargandoSeccion(true);
+    setErrorSeccion(null);
+
+    misReservas(token)
+      .then((resultado) => {
+        if (!cancelado) setReservas(resultado);
+      })
+      .catch((err: unknown) => {
+        if (!cancelado) {
+          setErrorSeccion(err instanceof Error ? err.message : "No se pudieron cargar tus viajes.");
+        }
+      })
+      .finally(() => {
+        if (!cancelado) setCargandoSeccion(false);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [seccionPasajero, token, esDashboardPasajero]);
 
   // --------------------------------------------------
   // DIBUJAR RUTA SELECCIONADA
@@ -344,6 +376,27 @@ function MapaViajes({
     }
   }
 
+  async function manejarCancelarReserva(idReserva: number) {
+    if (!token) return;
+
+    setCancelandoReserva(idReserva);
+    setErrorSeccion(null);
+    try {
+      await cancelarReserva(token, idReserva);
+      setReservas((actuales) =>
+        actuales.map((reserva) =>
+          reserva.id_reserva === idReserva
+            ? { ...reserva, estado: "cancelada" }
+            : reserva,
+        ),
+      );
+    } catch (err: unknown) {
+      setErrorSeccion(err instanceof Error ? err.message : "No se pudo cancelar la reserva.");
+    } finally {
+      setCancelandoReserva(null);
+    }
+  }
+
   // --------------------------------------------------
   // DATOS DE LA RUTA SELECCIONADA
   // --------------------------------------------------
@@ -368,7 +421,7 @@ function MapaViajes({
   // INTERFAZ
   // --------------------------------------------------
 
-const esDashboardPasajero = usuario?.rol === "pasajero"; const paginaDelMapa = ( 
+const paginaDelMapa = ( 
     
     <main className="mapa-pagina">
       <header className="mapa-navbar">
@@ -768,4 +821,163 @@ const esDashboardPasajero = usuario?.rol === "pasajero"; const paginaDelMapa = (
           </section>
         </aside>
       </div>
-    </main> ); if (esDashboardPasajero) { return ( <div className="dashboard"> <aside className="sidebar"> <div className="sidebar-logo">🚗 UniRide</div> <div className="sidebar-menu"> <button className="menu-item active">🏠 Inicio</button> <button className="menu-item" onClick={() => listaRef.current?.scrollIntoView({ behavior: "smooth" })} > 🔎 Buscar rutas </button> <button className="menu-item">📅 Mis viajes</button> <button className="menu-item">⭐ Calificaciones</button> <button className="menu-item">👤 Mi perfil</button> </div> <button className="logout-button" onClick={cerrarSesion}> 🚪 Cerrar sesión </button> </aside> {paginaDelMapa} </div> ); } return paginaDelMapa; } export default MapaViajes;
+    </main> );
+
+      if (esDashboardPasajero && seccionPasajero === "mapa") {
+        return (
+          <div className="dashboard">
+            <aside className="sidebar">
+              <div className="sidebar-logo">🚗 UniRide</div>
+              <div className="sidebar-menu">
+                <button className="menu-item active" onClick={() => setSeccionPasajero("mapa")}>🏠 Inicio</button>
+                <button
+                  className="menu-item"
+                  onClick={() => {
+                    setSeccionPasajero("mapa");
+                    setTimeout(() => listaRef.current?.scrollIntoView({ behavior: "smooth" }), 0);
+                  }}
+                >
+                  🔎 Buscar rutas
+                </button>
+                <button className="menu-item" onClick={() => setSeccionPasajero("viajes")}>📅 Mis viajes</button>
+                <button className="menu-item" onClick={() => setSeccionPasajero("calificaciones")}>⭐ Calificaciones</button>
+                <button className="menu-item" onClick={() => setSeccionPasajero("perfil")}>👤 Mi perfil</button>
+              </div>
+              <button className="logout-button" onClick={cerrarSesion}>🚪 Cerrar sesión</button>
+            </aside>
+            {paginaDelMapa}
+          </div>
+        );
+      }
+
+      if (esDashboardPasajero && seccionPasajero === "viajes") {
+        return (
+          <div className="dashboard">
+            <aside className="sidebar">
+              <div className="sidebar-logo">🚗 UniRide</div>
+              <div className="sidebar-menu">
+                <button className="menu-item" onClick={() => setSeccionPasajero("mapa")}>🏠 Inicio</button>
+                <button className="menu-item" onClick={() => setSeccionPasajero("mapa")}>🔎 Buscar rutas</button>
+                <button className="menu-item active">📅 Mis viajes</button>
+                <button className="menu-item" onClick={() => setSeccionPasajero("calificaciones")}>⭐ Calificaciones</button>
+                <button className="menu-item" onClick={() => setSeccionPasajero("perfil")}>👤 Mi perfil</button>
+              </div>
+              <button className="logout-button" onClick={cerrarSesion}>🚪 Cerrar sesión</button>
+            </aside>
+            <main className="dashboard-content">
+              <header className="dashboard-header">
+                <div><h1>Mis viajes</h1><p>Consulta el estado de tus reservas.</p></div>
+              </header>
+              {errorSeccion && <p className="error">{errorSeccion}</p>}
+              {cargandoSeccion ? (
+                <p>Cargando tus viajes...</p>
+              ) : reservas.length === 0 ? (
+                <p>Todavía no tienes reservas.</p>
+              ) : (
+                <div className="routes-grid">
+                  {reservas.map((reserva) => (
+                    <article className="route-card" key={reserva.id_reserva}>
+                      <h3>Reserva #{reserva.id_reserva}</h3>
+                      <p>Ruta: {reserva.id_ruta}</p>
+                      <p>Estado: <strong>{reserva.estado}</strong></p>
+                      <p>Cupos: {reserva.cantidad_cupos}</p>
+                      {reserva.estado !== "cancelada" && reserva.estado !== "rechazada" && (
+                        <button
+                          className="btn-outline full-button"
+                          disabled={cancelandoReserva === reserva.id_reserva}
+                          onClick={() => manejarCancelarReserva(reserva.id_reserva)}
+                        >
+                          {cancelandoReserva === reserva.id_reserva ? "Cancelando..." : "Cancelar reserva"}
+                        </button>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </main>
+          </div>
+        );
+      }
+
+      if (esDashboardPasajero && seccionPasajero === "calificaciones") {
+        const conductores = Array.from(
+          new Map(
+            rutas
+              .filter((ruta) => ruta.nombre_conductor)
+              .map((ruta) => [ruta.nombre_conductor!, {
+                nombre: ruta.nombre_conductor!,
+                calificacion: ruta.calificacion_conductor ?? 0,
+              }]),
+          ).values(),
+        );
+
+        return (
+          <div className="dashboard">
+            <aside className="sidebar">
+              <div className="sidebar-logo">🚗 UniRide</div>
+              <div className="sidebar-menu">
+                <button className="menu-item" onClick={() => setSeccionPasajero("mapa")}>🏠 Inicio</button>
+                <button className="menu-item" onClick={() => setSeccionPasajero("mapa")}>🔎 Buscar rutas</button>
+                <button className="menu-item" onClick={() => setSeccionPasajero("viajes")}>📅 Mis viajes</button>
+                <button className="menu-item active">⭐ Calificaciones</button>
+                <button className="menu-item" onClick={() => setSeccionPasajero("perfil")}>👤 Mi perfil</button>
+              </div>
+              <button className="logout-button" onClick={cerrarSesion}>🚪 Cerrar sesión</button>
+            </aside>
+            <main className="dashboard-content">
+              <header className="dashboard-header">
+                <div><h1>Calificaciones</h1><p>Valoración de conductores y usuarios.</p></div>
+              </header>
+              <section className="stats-grid">
+                <div className="stat-card"><span>⭐</span><div><p>Mi calificación</p><strong>{usuario.calificacion_promedio}</strong></div></div>
+              </section>
+              {conductores.length === 0 ? (
+                <p>Todavía no hay calificaciones de conductores disponibles.</p>
+              ) : (
+                <div className="routes-grid">
+                  {conductores.map((conductor) => (
+                    <article className="route-card" key={conductor.nombre}>
+                      <h3>{conductor.nombre}</h3>
+                      <p>⭐ {conductor.calificacion}</p>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </main>
+          </div>
+        );
+      }
+
+      if (esDashboardPasajero && seccionPasajero === "perfil") {
+        return (
+          <div className="dashboard">
+            <aside className="sidebar">
+              <div className="sidebar-logo">🚗 UniRide</div>
+              <div className="sidebar-menu">
+                <button className="menu-item" onClick={() => setSeccionPasajero("mapa")}>🏠 Inicio</button>
+                <button className="menu-item" onClick={() => setSeccionPasajero("mapa")}>🔎 Buscar rutas</button>
+                <button className="menu-item" onClick={() => setSeccionPasajero("viajes")}>📅 Mis viajes</button>
+                <button className="menu-item" onClick={() => setSeccionPasajero("calificaciones")}>⭐ Calificaciones</button>
+                <button className="menu-item active">👤 Mi perfil</button>
+              </div>
+              <button className="logout-button" onClick={cerrarSesion}>🚪 Cerrar sesión</button>
+            </aside>
+            <main className="dashboard-content">
+              <header className="dashboard-header">
+                <div><h1>Mi perfil</h1><p>Información de tu cuenta UniRide.</p></div>
+              </header>
+              <section className="route-card">
+                <h3>{usuario.nombre}</h3>
+                <p><strong>Correo:</strong> {usuario.correo_institucional}</p>
+                <p><strong>Rol:</strong> {usuario.rol}</p>
+                <p><strong>Calificación:</strong> ⭐ {usuario.calificacion_promedio}</p>
+              </section>
+            </main>
+          </div>
+        );
+      }
+
+      return paginaDelMapa;
+    }
+
+    export default MapaViajes;
