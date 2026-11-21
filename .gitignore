@@ -1,5 +1,21 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+uploads/
+
+# Node
 node_modules/
+dist/
+build/
+
+# Local demo database
 uniride.sqlite
 uniride.sqlite-shm
 uniride.sqlite-wal
+
+# Editors
 .vscode/
+.idea/
