@@ -2,8 +2,12 @@
 Este es el archivo que arranca el servidor.
 Se corre con:  uvicorn app.main:app --reload
 """
+import os
+from pathlib import Path
+
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -16,9 +20,15 @@ app = FastAPI(
     version="0.1.0",
 )
 
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,12 +41,16 @@ app.include_router(rutas.router)
 app.include_router(admin.router)
 
 
-@app.get("/")
-def raiz():
-    return {"mensaje": "UniRide API funcionando 🚗"}
-
-
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))
     return {"status": "ok", "database": "conectada"}
+
+
+frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+if frontend_dist.exists():
+    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
+else:
+    @app.get("/")
+    def raiz():
+        return {"mensaje": "UniRide API funcionando 🚗"}

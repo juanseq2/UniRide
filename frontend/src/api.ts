@@ -1,6 +1,9 @@
 // Este archivo centraliza TODAS las llamadas al backend.
 
-const API_URL = "http://localhost:8000";
+const API_URL = (
+  import.meta.env.VITE_API_URL?.trim() ||
+  ""
+).replace(/\/$/, "");
 
 export interface DatosRegistro {
   nombre: string;

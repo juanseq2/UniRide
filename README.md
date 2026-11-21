@@ -83,3 +83,18 @@ panel del conductor y en el mapa.
 Para generar la versión de producción del frontend, ejecuta `npm run build`
 dentro de `frontend/`, o desde la raíz del proyecto después de instalar sus
 dependencias.
+
+## Desplegar en Render
+
+El proyecto incluye un Blueprint en [`render.yaml`](render.yaml) que crea una
+base PostgreSQL y un único servicio web. El frontend se compila durante el
+build y FastAPI lo sirve junto con la API.
+
+1. Crea el servicio desde Render con **New > Blueprint** y selecciona este
+   repositorio.
+2. Render crea `uniride-db`, configura `DATABASE_URL` y ejecuta
+   `database/render_init.sql` antes de cada despliegue.
+3. Revisa `SECRET_KEY` y `ADMIN_SECRET_CODE` en las variables del servicio.
+4. Cuando Render genere la URL pública, cambia `CORS_ALLOWED_ORIGINS` si vas a
+   abrir el sitio desde otro dominio. La aplicación usa la misma URL para API y
+   frontend, por lo que no necesitas configurar `VITE_API_URL`.

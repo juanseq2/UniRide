@@ -11,9 +11,13 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL no está configurada")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # El "engine" es el objeto que sabe hablar con PostgreSQL
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 # Cada vez que atendemos una petición, abrimos una "sesión" (conversación con la BD)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

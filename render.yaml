@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: uniride
+    runtime: python
+    buildCommand: cd frontend && npm ci && npm run build && cd ../backend && pip install -r requirements.txt
+    preDeployCommand: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/render_init.sql
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: uniride-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_SECRET_CODE
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: CORS_ALLOWED_ORIGINS
+        value: ""
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+
+databases:
+  - name: uniride-db
