@@ -63,11 +63,6 @@ app.include_router(admin.router)
 app.include_router(reservas.router) 
 
 
-@app.get("/")
-def raiz():
-    return {"mensaje": "UniRide API funcionando 🚗"}
-
-
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))
@@ -80,6 +75,14 @@ ASSETS_DIR = FRONTEND_DIST / "assets"
 
 if ASSETS_DIR.is_dir():
     app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+
+
+@app.get("/", include_in_schema=False)
+def servir_raiz():
+    index = FRONTEND_DIST / "index.html"
+    if index.is_file():
+        return FileResponse(index)
+    return {"mensaje": "UniRide API funcionando 🚗"}
 
 
 @app.get("/{ruta:path}", include_in_schema=False)
