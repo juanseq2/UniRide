@@ -47,6 +47,7 @@ class Vehiculo(Base):
     id_conductor = Column(Integer, ForeignKey("conductores.id_usuario", ondelete="CASCADE"), nullable=False)
     placa = Column(String(10), nullable=False, unique=True)
     modelo = Column(String(100))
+    tipo = Column(String(20), nullable=False, default="carro")
     capacidad = Column(Integer, nullable=False)
 
     conductor = relationship("Conductor", back_populates="vehiculos")

@@ -21,4 +21,5 @@ class Ruta(Base):
     cupos_disponibles = Column(Integer, nullable=False)
     aporte_sugerido = Column(Numeric(10, 2), nullable=False)
     ruta_segura = Column(Boolean, default=False)
+    estado_viaje = Column(String(20), nullable=False, default="publicada")
     creado_en = Column(TIMESTAMP, server_default=func.now())

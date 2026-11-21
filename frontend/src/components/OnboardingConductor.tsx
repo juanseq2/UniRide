@@ -23,6 +23,7 @@ function OnboardingConductor({
 
   const [placa, setPlaca] = useState("");
   const [modelo, setModelo] = useState("");
+  const [tipoVehiculo, setTipoVehiculo] = useState<"moto" | "carro">("carro");
   const [capacidad, setCapacidad] = useState("4");
 
   const [enviando, setEnviando] = useState(false);
@@ -54,6 +55,7 @@ function OnboardingConductor({
       await registrarVehiculo(token, {
         placa: placa.trim().toUpperCase(),
         modelo: modelo.trim(),
+        tipo: tipoVehiculo,
         capacidad: Number(capacidad),
       });
       onVehiculoCompleto();
@@ -119,6 +121,16 @@ function OnboardingConductor({
 
           <label>Modelo (opcional)</label>
           <input value={modelo} onChange={(e) => setModelo(e.target.value)} maxLength={100} />
+
+          <label>Tipo de vehículo</label>
+          <select
+            value={tipoVehiculo}
+            onChange={(e) => setTipoVehiculo(e.target.value as "moto" | "carro")}
+            required
+          >
+            <option value="carro">Carro - $1.000 por km</option>
+            <option value="moto">Moto - $500 por km</option>
+          </select>
 
           <label>Capacidad de pasajeros</label>
           <input

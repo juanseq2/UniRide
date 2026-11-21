@@ -48,6 +48,7 @@ CREATE TABLE vehiculos (
     id_conductor    INTEGER NOT NULL REFERENCES conductores(id_usuario) ON DELETE CASCADE,
     placa           VARCHAR(10) NOT NULL UNIQUE,
     modelo          VARCHAR(100),
+    tipo            VARCHAR(20) NOT NULL DEFAULT 'carro',
     capacidad       INTEGER NOT NULL
 );
 
@@ -69,6 +70,7 @@ CREATE TABLE rutas (
     cupos_disponibles   INTEGER NOT NULL,
     aporte_sugerido     NUMERIC(10,2) NOT NULL,
     ruta_segura         BOOLEAN DEFAULT FALSE,   -- filtro "UniRide Ellas"
+    estado_viaje        VARCHAR(20) NOT NULL DEFAULT 'publicada',
     creado_en           TIMESTAMP DEFAULT NOW()
 );
 

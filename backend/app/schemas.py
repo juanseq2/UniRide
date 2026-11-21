@@ -77,6 +77,7 @@ class ConductorPendienteOut(BaseModel):
 class VehiculoCreate(BaseModel):
     placa: str
     modelo: Optional[str] = None
+    tipo: str = "carro"
     capacidad: int
 
 
@@ -84,6 +85,7 @@ class VehiculoOut(BaseModel):
     id_vehiculo: int
     placa: str
     modelo: Optional[str] = None
+    tipo: str = "carro"
     capacidad: int
 
     class Config:
@@ -122,6 +124,7 @@ class RutaOut(BaseModel):
     cupos_disponibles: int
     aporte_sugerido: float
     ruta_segura: bool
+    estado_viaje: str = "publicada"
     nombre_conductor: Optional[str] = None
     calificacion_conductor: Optional[float] = None
 

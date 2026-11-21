@@ -7,6 +7,7 @@ import {
   reservasRecibidas,
   confirmarReserva,
   rechazarReserva,
+  iniciarViaje,
 } from "../api";
 import type { Ruta, Usuario, Vehiculo, ReservaDetalle } from "../api";
 import BuscadorDireccion from "./BuscadorDireccion";
@@ -50,8 +51,8 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
   const [fecha, setFecha] = useState(fechaLocalActual);
   const [horaSalida, setHoraSalida] = useState("");
   const [cupos, setCupos] = useState("1");
-  const [aporte, setAporte] = useState("");
   const [rutaSegura, setRutaSegura] = useState(false);
+  const [iniciandoRuta, setIniciandoRuta] = useState<number | null>(null);
 
   async function cargarTodo() {
     setCargando(true);
@@ -123,6 +124,25 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
     }
   }
 
+  async function manejarIniciarViaje(idRuta: number) {
+    setIniciandoRuta(idRuta);
+    setErrorCarga(null);
+    setMensajeExito(null);
+    try {
+      const rutaActualizada = await iniciarViaje(token, idRuta);
+      setRutas((actuales) =>
+        actuales.map((ruta) =>
+          ruta.id_ruta === idRuta ? rutaActualizada : ruta,
+        ),
+      );
+      setMensajeExito("¡Viaje iniciado! Los pasajeros pueden ver el estado en curso.");
+    } catch (error: unknown) {
+      setErrorCarga(error instanceof Error ? error.message : "No se pudo iniciar el viaje.");
+    } finally {
+      setIniciandoRuta(null);
+    }
+  }
+
   function abrirFormularioRuta() {
     setErrorFormulario(null);
     setMensajeExito(null);
@@ -152,7 +172,7 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
         fecha,
         hora_salida: horaSalida,
         cupos_disponibles: Number(cupos),
-        aporte_sugerido: Number(aporte),
+        aporte_sugerido: 0,
         ruta_segura: rutaSegura,
       });
 
@@ -170,7 +190,6 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
       setDestinoLat(null);
       setDestinoLng(null);
       setHoraSalida("");
-      setAporte("");
       setRutaSegura(false);
     } catch (error: unknown) {
       setErrorFormulario(error instanceof Error ? error.message : "No se pudo publicar la ruta.");
@@ -180,6 +199,35 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
   }
 
   const reservasPendientes = reservas.filter((reserva) => reserva.estado === "pendiente");
+  const vehiculoSeleccionadoInfo = vehiculos.find(
+    (vehiculo) => String(vehiculo.id_vehiculo) === vehiculoSeleccionado,
+  );
+
+  function calcularCobroEstimado() {
+    if (
+      origenLat == null ||
+      origenLng == null ||
+      destinoLat == null ||
+      destinoLng == null
+    ) return null;
+
+    const radioTierraKm = 6371;
+    const latOrigen = origenLat * Math.PI / 180;
+    const latDestino = destinoLat * Math.PI / 180;
+    const diferenciaLat = (destinoLat - origenLat) * Math.PI / 180;
+    const diferenciaLng = (destinoLng - origenLng) * Math.PI / 180;
+    const a =
+      Math.sin(diferenciaLat / 2) ** 2 +
+      Math.cos(latOrigen) * Math.cos(latDestino) * Math.sin(diferenciaLng / 2) ** 2;
+    const distanciaKm = radioTierraKm * 2 * Math.asin(Math.sqrt(a));
+    const tarifa = vehiculoSeleccionadoInfo?.tipo === "moto" ? 500 : 1000;
+    return {
+      distanciaKm,
+      cobro: Math.round(distanciaKm * tarifa),
+    };
+  }
+
+  const cobroEstimado = calcularCobroEstimado();
 
   return (
     <div className="dashboard">
@@ -192,16 +240,21 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
           >
             🏠 Inicio
           </button>
-          <button className="menu-item" onClick={abrirFormularioRuta}>🚗 Mi vehículo</button>
           <button
             className="menu-item"
-            onClick={() => document.querySelector(".create-route-section")?.scrollIntoView({ behavior: "smooth" })}
+            onClick={() => document.querySelector("#vehiculos-conductor")?.scrollIntoView({ behavior: "smooth" })}
+          >
+            🚗 Mi vehículo
+          </button>
+          <button
+            className="menu-item"
+            onClick={() => document.querySelector("#historial-rutas")?.scrollIntoView({ behavior: "smooth" })}
           >
             📊 Historial
           </button>
           <button
             className="menu-item"
-            onClick={() => document.querySelector(".dashboard-header")?.scrollIntoView({ behavior: "smooth" })}
+            onClick={() => document.querySelector("#perfil-conductor")?.scrollIntoView({ behavior: "smooth" })}
           >
             👤 Mi perfil
           </button>
@@ -210,7 +263,7 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
       </aside>
 
       <main className="dashboard-content">
-        <header className="dashboard-header">
+        <header className="dashboard-header" id="perfil-conductor">
           <div>
             <h1>¡Hola, {primerNombre}! 👋</h1>
             <p>Este es el resumen de tus viajes.</p>
@@ -223,6 +276,30 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
             </div>
           </div>
         </header>
+
+        <section className="route-card" aria-label="Perfil del conductor">
+          <h2>Mi perfil</h2>
+          <p><strong>Nombre:</strong> {usuario.nombre}</p>
+          <p><strong>Correo:</strong> {usuario.correo_institucional}</p>
+          <p><strong>Rol:</strong> Conductor</p>
+          <p><strong>Calificación:</strong> ⭐ {usuario.calificacion_promedio}</p>
+        </section>
+
+        <section className="route-card" id="vehiculos-conductor" aria-label="Mis vehículos">
+          <h2>Mis vehículos</h2>
+          {vehiculos.length === 0 ? (
+            <p>Completa el onboarding para registrar tu primer vehículo.</p>
+          ) : (
+            vehiculos.map((vehiculo) => (
+              <p key={vehiculo.id_vehiculo}>
+                <strong>{vehiculo.tipo === "moto" ? "Moto" : "Carro"}</strong>
+                {" · "}{vehiculo.placa}
+                {" · "}{vehiculo.modelo || "Modelo no registrado"}
+                {" · "}{vehiculo.capacidad} pasajeros
+              </p>
+            ))
+          )}
+        </section>
 
         {mensajeExito && <p className="exito">{mensajeExito}</p>}
         {errorCarga && <p className="error">{errorCarga}</p>}
@@ -295,7 +372,7 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
           </div>
         )}
 
-        <section className="create-route-section">
+        <section className="create-route-section" id="historial-rutas">
           <div>
             <h2>Mis rutas</h2>
             <p>Administra los trayectos que tienes publicados.</p>
@@ -323,8 +400,18 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
                 <h3>{ruta.origen} → {ruta.destino}</h3>
                 <p>📅 {new Date(`${ruta.fecha}T00:00:00`).toLocaleDateString("es-CO")}</p>
                 <div className="driver-info">
-                  {ruta.ruta_segura ? "🛡️ Ruta segura" : "Aporte sugerido"} · ${Number(ruta.aporte_sugerido).toLocaleString("es-CO")}
+                  Cobro por viaje · ${Number(ruta.aporte_sugerido).toLocaleString("es-CO")}
+                  {" "}· {ruta.estado_viaje === "en_curso" ? "En curso" : "Publicada"}
                 </div>
+                {ruta.estado_viaje !== "en_curso" && (
+                  <button
+                    className="btn-primary full-button"
+                    disabled={iniciandoRuta === ruta.id_ruta}
+                    onClick={() => manejarIniciarViaje(ruta.id_ruta)}
+                  >
+                    {iniciandoRuta === ruta.id_ruta ? "Iniciando..." : "Iniciar viaje"}
+                  </button>
+                )}
               </article>
             ))}
           </section>
@@ -401,10 +488,19 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
                     required
                   />
                 </label>
-                <label>
-                  Aporte sugerido (COP)
-                  <input type="number" min="0" step="100" value={aporte} onChange={(event) => setAporte(event.target.value)} required />
-                </label>
+                <div className="route-charge-preview">
+                  <span>Cobro sugerido por distancia</span>
+                  <strong>
+                    {cobroEstimado
+                      ? `$${cobroEstimado.cobro.toLocaleString("es-CO")} COP · ${cobroEstimado.distanciaKm.toFixed(1)} km`
+                      : "Selecciona origen y destino"}
+                  </strong>
+                  <small>
+                    {vehiculoSeleccionadoInfo?.tipo === "moto"
+                      ? "Tarifa: $500 COP por km"
+                      : "Tarifa: $1.000 COP por km"}
+                  </small>
+                </div>
               </div>
 
               <label className="route-checkbox">

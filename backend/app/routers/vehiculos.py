@@ -45,6 +45,7 @@ def registrar_vehiculo(
         id_conductor=conductor.id_usuario,
         placa=datos.placa.strip().upper(),
         modelo=datos.modelo,
+        tipo=datos.tipo if datos.tipo in {"moto", "carro"} else "carro",
         capacidad=datos.capacidad,
     )
     db.add(nuevo)

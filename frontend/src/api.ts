@@ -42,6 +42,7 @@ export interface Ruta {
   cupos_disponibles: number;
   aporte_sugerido: number;
   ruta_segura: boolean;
+  estado_viaje: "publicada" | "en_curso" | "finalizada";
   nombre_conductor?: string;
   calificacion_conductor?: number;
 }
@@ -50,6 +51,7 @@ export interface Vehiculo {
   id_vehiculo: number;
   placa: string;
   modelo: string | null;
+  tipo: "moto" | "carro";
   capacidad: number;
 }
 
@@ -171,7 +173,7 @@ export async function listarMisVehiculos(token: string): Promise<Vehiculo[]> {
 
 export async function registrarVehiculo(
   token: string,
-  datos: { placa: string; modelo: string; capacidad: number },
+  datos: { placa: string; modelo: string; tipo: "moto" | "carro"; capacidad: number },
 ): Promise<Vehiculo> {
   const res = await fetch(`${API_URL}/vehiculos/`, {
     method: "POST",
@@ -192,6 +194,14 @@ export async function publicarRuta(token: string, datos: DatosRuta): Promise<Rut
       "Content-Type": "application/json",
     },
     body: JSON.stringify(datos),
+  });
+  return manejarRespuesta(res);
+}
+
+export async function iniciarViaje(token: string, idRuta: number): Promise<Ruta> {
+  const res = await fetch(`${API_URL}/rutas/${idRuta}/iniciar`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
   });
   return manejarRespuesta(res);
 }
