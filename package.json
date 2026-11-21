@@ -1,0 +1,11 @@
+{
+  "name": "uniride",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace frontend",
+    "start": "node scripts/serve.mjs"
+  }
+}
