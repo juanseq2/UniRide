@@ -24,10 +24,14 @@ services:
 
   - type: web
     name: uniride
-    runtime: node
-    rootDir: .
-    buildCommand: npm run build
-    startCommand: npm start
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: VITE_API_URL
         sync: false
