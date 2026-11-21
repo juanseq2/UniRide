@@ -133,9 +133,22 @@ function DashboardPasajero({ usuario, token, cerrarSesion, abrirMapa }: Dashboar
         {error && <p className="error">{error}</p>}
         {mensajeExito && <p className="exito">{mensajeExito}</p>}
 
-
-
         <section>
+          <form onSubmit={manejarBuscar} className="route-search">
+            <input
+              value={origen}
+              onChange={(event) => setOrigen(event.target.value)}
+              placeholder="Origen"
+              aria-label="Origen"
+            />
+            <input
+              value={destino}
+              onChange={(event) => setDestino(event.target.value)}
+              placeholder="Destino"
+              aria-label="Destino"
+            />
+            <button type="submit" className="btn-primary">Buscar</button>
+          </form>
 
           <div className="section-title">
             <h2>Rutas disponibles</h2>

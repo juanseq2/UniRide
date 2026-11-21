@@ -70,3 +70,28 @@ panel del conductor y en el mapa.
 Para generar la versión de producción del frontend, ejecuta `npm run build`
 dentro de `frontend/`, o desde la raíz del proyecto después de instalar sus
 dependencias.
+
+## Desplegar en Render
+
+El archivo [`render.yaml`](render.yaml) crea la API, el frontend estático y la
+base de datos PostgreSQL.
+
+1. Sube los cambios a GitHub y crea un nuevo Blueprint en Render usando este
+   repositorio.
+2. Configura `ADMIN_SECRET_CODE` con el código que quieras usar para registrar
+   administradores.
+3. En el servicio estático `uniride`, configura `VITE_API_URL` con la URL HTTPS
+   de la API, por ejemplo `https://uniride-api.onrender.com`.
+4. En el servicio `uniride-api`, configura `CORS_ORIGINS` con la URL HTTPS del
+   frontend, por ejemplo `https://uniride.onrender.com`.
+5. Render conectará `DATABASE_URL` automáticamente a la base de datos
+   `uniride-db`. El arranque crea las tablas faltantes y agrega las columnas de
+   coordenadas de rutas.
+
+Después de cambiar `VITE_API_URL`, inicia un nuevo despliegue manual del
+frontend. Las variables `VITE_*` se incorporan durante la compilación.
+
+Los archivos de licencia, SOAT y tarjeta de propiedad se guardan en el disco
+temporal del servicio por defecto. Usa un Render Disk persistente y configura
+`UPLOAD_DIR` si necesitas conservar esos documentos después de reinicios o
+despliegues.

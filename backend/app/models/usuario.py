@@ -20,7 +20,7 @@ class Usuario(Base):
     correo_institucional = Column(String(150), nullable=False, unique=True, index=True)
     telefono = Column(String(20))
     password_hash = Column(String(255), nullable=False)
-    rol = Column(Enum(RolUsuario), nullable=False)
+    rol = Column(Enum(RolUsuario, name="rol_usuario"), nullable=False)
     calificacion_promedio = Column(Numeric(2, 1), default=0.0)
     creado_en = Column(TIMESTAMP, server_default=func.now())
 

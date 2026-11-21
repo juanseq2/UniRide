@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
@@ -12,7 +13,11 @@ router = APIRouter(prefix="/conductores", tags=["Conductores"])
 
 EXTENSIONES_PERMITIDAS = {".jpg", ".jpeg", ".png", ".pdf"}
 TAMANO_MAXIMO = 5 * 1024 * 1024  # 5 MB
-CARPETA_UPLOADS = Path("uploads") / "conductores"
+BASE_DIR = Path(__file__).resolve().parents[2]
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", str(BASE_DIR / "uploads"))).expanduser()
+if not UPLOAD_DIR.is_absolute():
+    UPLOAD_DIR = (BASE_DIR / UPLOAD_DIR).resolve()
+CARPETA_UPLOADS = UPLOAD_DIR / "conductores"
 
 
 def _guardar_documento(archivo: UploadFile, id_usuario: int, nombre_campo: str) -> str:

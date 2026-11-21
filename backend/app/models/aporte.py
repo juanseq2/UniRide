@@ -18,4 +18,4 @@ class Aporte(Base):
     id_reserva = Column(Integer, ForeignKey("reservas.id_reserva", ondelete="CASCADE"), unique=True, nullable=False)
     valor = Column(Numeric(10, 2), nullable=False)
     fecha = Column(TIMESTAMP, server_default=func.now())
-    estado = Column(Enum(EstadoAporte), default=EstadoAporte.pendiente)
+    estado = Column(Enum(EstadoAporte, name="estado_aporte"), default=EstadoAporte.pendiente)

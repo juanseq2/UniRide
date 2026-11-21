@@ -19,5 +19,5 @@ class Reserva(Base):
     id_ruta = Column(Integer, ForeignKey("rutas.id_ruta", ondelete="CASCADE"), nullable=False)
     id_pasajero = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=False)
     fecha_reserva = Column(TIMESTAMP, server_default=func.now())
-    estado = Column(Enum(EstadoReserva), default=EstadoReserva.pendiente)
+    estado = Column(Enum(EstadoReserva, name="estado_reserva"), default=EstadoReserva.pendiente)
     cantidad_cupos = Column(Integer, nullable=False, default=1)

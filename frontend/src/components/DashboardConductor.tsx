@@ -24,7 +24,7 @@ function fechaLocalActual() {
   return new Date(hoy.getTime() - zonaHoraria).toISOString().slice(0, 10);
 }
 
-function DashboardConductor({ usuario, token, cerrarSesion, abrirMapa }: DashboardConductorProps) {
+function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductorProps) {
   const primerNombre = usuario.nombre.split(" ")[0];
   const inicial = usuario.nombre.charAt(0).toUpperCase();
   const [rutas, setRutas] = useState<Ruta[]>([]);

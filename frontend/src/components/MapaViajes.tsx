@@ -152,6 +152,7 @@ function MapaViajes({
 
     function dibujarSoloMarcadores() {
       if (cancelado) return;
+      if (!mapa) return;
 
       const capa = L.layerGroup();
 
@@ -187,6 +188,7 @@ function MapaViajes({
       })
       .then((datos) => {
         if (cancelado) return;
+        if (!mapa) return;
 
         const coordenadas = datos.routes?.[0]?.geometry
           ?.coordinates as [number, number][] | undefined;
