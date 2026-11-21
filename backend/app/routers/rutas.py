@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.ruta import Ruta
 from app.models.usuario import Vehiculo, Conductor, Usuario
+from app.models.reserva import Reserva, EstadoReserva
 from app import schemas
 from app.deps import obtener_conductor_actual
 
@@ -133,8 +134,20 @@ def iniciar_viaje(
     ).first()
     if not ruta:
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
+    if ruta.estado_viaje == "en_curso":
+        raise HTTPException(status_code=400, detail="Esta ruta ya está en curso")
     if ruta.estado_viaje == "finalizada":
         raise HTTPException(status_code=400, detail="Esta ruta ya fue finalizada")
+
+    reserva_confirmada = db.query(Reserva).filter(
+        Reserva.id_ruta == id_ruta,
+        Reserva.estado == EstadoReserva.confirmada,
+    ).first()
+    if not reserva_confirmada:
+        raise HTTPException(
+            status_code=400,
+            detail="Confirma al menos una reserva antes de iniciar el viaje",
+        )
 
     ruta.estado_viaje = "en_curso"
     db.commit()

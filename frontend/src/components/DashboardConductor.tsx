@@ -476,13 +476,28 @@ function DashboardConductor({ usuario, token, cerrarSesion }: DashboardConductor
                   Cobro por viaje · ${Number(ruta.aporte_sugerido).toLocaleString("es-CO")}
                   {" "}· {ruta.estado_viaje === "en_curso" ? "En curso" : "Publicada"}
                 </div>
-                {ruta.estado_viaje !== "en_curso" && (
+                {ruta.estado_viaje !== "en_curso" && ruta.estado_viaje !== "finalizada" && (
                   <button
                     className="btn-primary full-button"
-                    disabled={iniciandoRuta === ruta.id_ruta}
+                    disabled={
+                      iniciandoRuta === ruta.id_ruta ||
+                      !reservas.some(
+                        (reserva) =>
+                          reserva.id_ruta === ruta.id_ruta &&
+                          reserva.estado === "confirmada",
+                      )
+                    }
                     onClick={() => manejarIniciarViaje(ruta.id_ruta)}
                   >
-                    {iniciandoRuta === ruta.id_ruta ? "Iniciando..." : "Iniciar viaje"}
+                    {iniciandoRuta === ruta.id_ruta
+                      ? "Iniciando..."
+                      : reservas.some(
+                            (reserva) =>
+                              reserva.id_ruta === ruta.id_ruta &&
+                              reserva.estado === "confirmada",
+                          )
+                        ? "Iniciar viaje"
+                        : "Confirma una reserva"}
                   </button>
                 )}
               </article>
