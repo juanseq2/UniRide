@@ -25,8 +25,8 @@ services:
   - type: web
     name: uniride
     runtime: node
-    rootDir: frontend
-    buildCommand: npm install && npm run build
+    rootDir: .
+    buildCommand: npm run build
     startCommand: npm start
     envVars:
       - key: VITE_API_URL

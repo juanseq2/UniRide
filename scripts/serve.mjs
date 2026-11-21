@@ -1,9 +1,11 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
-import { extname, resolve, sep } from "node:path";
+import { dirname, extname, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const port = Number(process.env.PORT || 4173);
-const distDirectory = resolve("frontend/dist");
+const repositoryDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const distDirectory = resolve(repositoryDirectory, "frontend/dist");
 
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
@@ -29,6 +31,12 @@ createServer((request, response) => {
   let filePath = requestedPath;
   if (!existsSync(filePath) || statSync(filePath).isDirectory()) {
     filePath = resolve(distDirectory, "index.html");
+  }
+
+  if (!existsSync(filePath)) {
+    response.writeHead(503, { "Content-Type": "text/plain; charset=utf-8" });
+    response.end("Frontend build not found.");
+    return;
   }
 
   response.writeHead(200, {
