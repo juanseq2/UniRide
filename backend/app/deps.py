@@ -21,7 +21,7 @@ from app.models.usuario import Usuario, Conductor
 # Esto le dice a FastAPI/Swagger dónde se consigue el token (para el botón "Authorize" en /docs)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY") or "development-only-secret-change-me"
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 
 

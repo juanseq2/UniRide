@@ -25,7 +25,7 @@ def registrar_usuario(datos: schemas.UsuarioRegistro, db: Session = Depends(get_
 
     # Solo se puede crear un usuario admin si se conoce el código secreto (guardado en .env)
     if datos.rol == RolUsuario.admin:
-        codigo_esperado = os.getenv("ADMIN_SECRET_CODE")
+        codigo_esperado = os.getenv("ADMIN_REGISTER_CODE") or os.getenv("ADMIN_SECRET_CODE")
         if not codigo_esperado or datos.codigo_admin != codigo_esperado:
             raise HTTPException(status_code=403, detail="Código de administrador incorrecto")
 
