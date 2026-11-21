@@ -31,6 +31,13 @@ async def lifespan(_: FastAPI):
             ADD COLUMN IF NOT EXISTS destino_lat DOUBLE PRECISION,
             ADD COLUMN IF NOT EXISTS destino_lng DOUBLE PRECISION
         """))
+        connection.execute(text("""
+            ALTER TABLE conductores
+            ADD COLUMN IF NOT EXISTS licencia_archivo VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS soat_archivo VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS tarjeta_propiedad_archivo VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS documentos_aprobados BOOLEAN DEFAULT FALSE
+        """))
     yield
 
 app = FastAPI(
