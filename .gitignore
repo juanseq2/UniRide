@@ -8,7 +8,6 @@ uploads/
 
 # Node
 node_modules/
-dist/
 build/
 
 # Local demo database

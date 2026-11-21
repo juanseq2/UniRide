@@ -20,6 +20,11 @@ if not DATABASE_URL:
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+if DATABASE_URL.startswith("postgresql://"):
+    separator = "?" if "?" not in DATABASE_URL else "&"
+    if "sslmode=" not in DATABASE_URL:
+        DATABASE_URL = f"{DATABASE_URL}{separator}sslmode=require"
+
 # El "engine" es el objeto que sabe hablar con PostgreSQL
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
