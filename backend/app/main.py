@@ -4,9 +4,12 @@ Se corre con:  uvicorn app.main:app --reload
 """
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -69,3 +72,23 @@ def raiz():
 def health_check(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))
     return {"status": "ok", "database": "conectada"}
+
+
+PROJECT_DIR = Path(__file__).resolve().parents[2]
+FRONTEND_DIST = PROJECT_DIR / "frontend" / "dist"
+ASSETS_DIR = FRONTEND_DIST / "assets"
+
+if ASSETS_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+
+
+@app.get("/{ruta:path}", include_in_schema=False)
+def servir_frontend(ruta: str):
+    if FRONTEND_DIST.is_dir():
+        archivo = (FRONTEND_DIST / ruta).resolve()
+        if archivo.is_relative_to(FRONTEND_DIST.resolve()) and archivo.is_file():
+            return FileResponse(archivo)
+        index = FRONTEND_DIST / "index.html"
+        if index.is_file():
+            return FileResponse(index)
+    return {"mensaje": "UniRide API funcionando 🚗"}

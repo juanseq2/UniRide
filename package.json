@@ -1,8 +1,0 @@
-{
-  "name": "uniride",
-  "private": true,
-  "scripts": {
-    "build": "npm install --include=dev --prefix frontend && npm run build --prefix frontend",
-    "start": "npm run build && node server.mjs"
-  }
-}
