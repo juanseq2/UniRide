@@ -5,7 +5,15 @@ import { fileURLToPath } from "node:url";
 
 const port = Number(process.env.PORT || 4173);
 const rootDirectory = dirname(fileURLToPath(import.meta.url));
-const distDirectory = resolve(rootDirectory, "frontend", "dist");
+const distCandidates = [
+  resolve(rootDirectory, "frontend", "dist"),
+  resolve(rootDirectory, "dist"),
+  resolve(process.cwd(), "frontend", "dist"),
+  resolve(process.cwd(), "dist"),
+];
+const distDirectory =
+  distCandidates.find((candidate) => existsSync(resolve(candidate, "index.html"))) ||
+  distCandidates[0];
 
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
