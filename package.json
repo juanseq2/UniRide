@@ -1,12 +1,8 @@
 {
-  "name": "uniride-local-demo",
-  "version": "1.0.0",
+  "name": "uniride",
   "private": true,
-  "description": "Demo local UniRide con creación de viajes y base de datos SQLite.",
   "scripts": {
-    "start": "node server.js"
-  },
-  "engines": {
-    "node": ">=22.5"
+    "build": "npm install --include=dev --prefix frontend && npm run build --prefix frontend",
+    "start": "npm run build && node server.mjs"
   }
 }
