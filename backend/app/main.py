@@ -60,13 +60,23 @@ app.include_router(conductores.router)
 app.include_router(vehiculos.router)
 app.include_router(rutas.router)
 app.include_router(admin.router)
-app.include_router(reservas.router) 
+app.include_router(reservas.router)
 
 
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))
-    return {"status": "ok", "database": "conectada"}
+    tablas = {}
+    for tabla in ("usuarios", "conductores", "vehiculos", "rutas", "reservas"):
+        resultado = db.execute(text("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = :tabla
+            )
+        """), {"tabla": tabla}).scalar()
+        tablas[tabla] = bool(resultado)
+    return {"status": "ok", "database": "conectada", "tablas": tablas}
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[2]
