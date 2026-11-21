@@ -14,7 +14,12 @@ router = APIRouter(prefix="/conductores", tags=["Conductores"])
 EXTENSIONES_PERMITIDAS = {".jpg", ".jpeg", ".png", ".pdf"}
 TAMANO_MAXIMO = 5 * 1024 * 1024  # 5 MB
 BASE_DIR = Path(__file__).resolve().parents[2]
-UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", str(BASE_DIR / "uploads"))).expanduser()
+UPLOAD_DIR = Path(
+    os.getenv(
+        "UPLOAD_DIR",
+        "/tmp/uniride/uploads" if os.getenv("RENDER") else str(BASE_DIR / "uploads"),
+    )
+).expanduser()
 if not UPLOAD_DIR.is_absolute():
     UPLOAD_DIR = (BASE_DIR / UPLOAD_DIR).resolve()
 CARPETA_UPLOADS = UPLOAD_DIR / "conductores"
@@ -33,10 +38,16 @@ def _guardar_documento(archivo: UploadFile, id_usuario: int, nombre_campo: str) 
         raise HTTPException(status_code=400, detail=f"El archivo de {nombre_campo} supera los 5 MB.")
 
     carpeta = CARPETA_UPLOADS / str(id_usuario)
-    carpeta.mkdir(parents=True, exist_ok=True)
-    ruta_archivo = carpeta / f"{nombre_campo}{extension}"
-    with open(ruta_archivo, "wb") as f:
-        f.write(contenido)
+    try:
+        carpeta.mkdir(parents=True, exist_ok=True)
+        ruta_archivo = carpeta / f"{nombre_campo}{extension}"
+        with open(ruta_archivo, "wb") as f:
+            f.write(contenido)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo guardar el documento en el servidor",
+        ) from exc
 
     return str(ruta_archivo)
 
@@ -60,15 +71,31 @@ def completar_perfil_conductor(
     ruta_soat = _guardar_documento(soat, usuario.id_usuario, "soat")
     ruta_tarjeta = _guardar_documento(tarjeta_propiedad, usuario.id_usuario, "tarjeta_propiedad")
 
-    existente = db.query(Conductor).filter(Conductor.id_usuario == usuario.id_usuario).first()
+    try:
+        existente = db.query(Conductor).filter(
+            Conductor.id_usuario == usuario.id_usuario
+        ).first()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo consultar el perfil de conductor",
+        ) from exc
 
     if existente:
         existente.licencia_archivo = ruta_licencia
         existente.soat_archivo = ruta_soat
         existente.tarjeta_propiedad_archivo = ruta_tarjeta
-        existente.documentos_aprobados = False  # si vuelve a subir, debe re-aprobarse
-        db.commit()
-        db.refresh(existente)
+        existente.documentos_aprobados = False
+        try:
+            db.commit()
+            db.refresh(existente)
+        except Exception as exc:
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail="No se pudo guardar el perfil de conductor",
+            ) from exc
         return existente
 
     nuevo = Conductor(
@@ -78,9 +105,16 @@ def completar_perfil_conductor(
         tarjeta_propiedad_archivo=ruta_tarjeta,
         documentos_aprobados=False,
     )
-    db.add(nuevo)
-    db.commit()
-    db.refresh(nuevo)
+    try:
+        db.add(nuevo)
+        db.commit()
+        db.refresh(nuevo)
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo guardar el perfil de conductor",
+        ) from exc
     return nuevo
 
 
